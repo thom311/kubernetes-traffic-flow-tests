@@ -716,7 +716,7 @@ class ServerTask(Task, ABC):
             ts=ts,
             index=ts.server_index,
             tenant=ts.server_is_tenant,
-            task_role=TaskRole.SERVER_USED,
+            task_role=TaskRole.SERVER,
         )
 
         connection_mode = ts.connection_mode

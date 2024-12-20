@@ -31,7 +31,7 @@ class PluginMeasureCpu(pluginbase.Plugin):
         tenant: bool,
     ) -> list[PluginTask]:
         return [
-            TaskMeasureCPU(ts, TaskRole.SERVER_USED, tenant),
+            TaskMeasureCPU(ts, TaskRole.SERVER, tenant),
             TaskMeasureCPU(ts, TaskRole.CLIENT, tenant),
         ]
 

@@ -66,11 +66,9 @@ class TestSettings:
             return self.conf_server
 
     def conf_clientserver(self, task_role: TaskRole) -> testConfig.ConfBaseClientServer:
-        if task_role == TaskRole.SERVER:
-            return self.conf_server
         if task_role == TaskRole.CLIENT:
             return self.conf_client
-        if task_role == TaskRole.SERVER_USED:
+        if task_role == TaskRole.SERVER:
             return self.conf_server_used
         raise ValueError()
 

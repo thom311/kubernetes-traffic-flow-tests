@@ -15,6 +15,7 @@ from testSettings import TestSettings
 from tftbase import BaseOutput
 from tftbase import PluginOutput
 from tftbase import PodType
+from tftbase import TaskRole
 
 
 logger = logging.getLogger("tft." + __name__)
@@ -129,8 +130,8 @@ class PluginValidateOffload(pluginbase.Plugin):
     ) -> list[PluginTask]:
         # TODO allow this to run on each individual server + client pairs.
         return [
-            TaskValidateOffload(ts, ts.conf_server_used.name, perf_server, tenant),
-            TaskValidateOffload(ts, ts.conf_client.name, perf_client, tenant),
+            TaskValidateOffload(ts, TaskRole.SERVER_USED, perf_server, tenant),
+            TaskValidateOffload(ts, TaskRole.CLIENT, perf_client, tenant),
         ]
 
 
@@ -145,14 +146,15 @@ class TaskValidateOffload(PluginTask):
     def __init__(
         self,
         ts: TestSettings,
-        node_name: str,
+        task_role: TaskRole,
         perf_instance: task.ServerTask | task.ClientTask,
         tenant: bool,
     ):
         super().__init__(
             ts=ts,
             index=0,
-            node_name=node_name,
+            node_name=ts.conf_clientserver(task_role).name,
+            task_role=task_role,
             tenant=tenant,
         )
 

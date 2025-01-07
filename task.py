@@ -769,7 +769,7 @@ class ServerTask(Task, ABC):
 
         return {
             **super().get_template_args(),
-            "default_network": self.ts._node_server.default_network,
+            "default_network": self.ts.node_server.default_network,
             **extra_args,
         }
 

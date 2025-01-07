@@ -128,7 +128,7 @@ class TestSettings:
 
     @property
     def server_pod_type(self) -> tftbase.PodType:
-        return self.test_case_id.info.get_server_pod_type(self._node_server.pod_type)
+        return self.test_case_id.info.get_server_pod_type(self.node_server.pod_type)
 
     @property
     def client_pod_type(self) -> tftbase.PodType:

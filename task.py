@@ -25,6 +25,7 @@ from ktoolbox import netdev
 from ktoolbox import kjinja2
 from ktoolbox.k8sClient import K8sClient
 
+import testConfig
 import tftbase
 
 from pluginbase import Plugin
@@ -279,8 +280,16 @@ class Task(ABC):
         return f"{self.log_name}.setup"
 
     @property
+    def node(self) -> testConfig.ConfNodeBase:
+        if self.task_role == TaskRole.CLIENT:
+            return self.ts.node_client
+        if self.task_role == TaskRole.SERVER:
+            return self.ts.node_server
+        raise ValueError()
+
+    @property
     def node_name(self) -> str:
-        return self.ts.node_for_role(self.task_role).name
+        return self.node.name
 
     def get_namespace(self) -> str:
         return self.ts.cfg_descr.get_tft().namespace

@@ -8,7 +8,6 @@ import testConfig
 import tftbase
 
 from tftbase import PodInfo
-from tftbase import TaskRole
 from tftbase import TestMetadata
 
 
@@ -64,13 +63,6 @@ class TestSettings:
             return self.node_client
         else:
             return self._node_server
-
-    def node_for_role(self, task_role: TaskRole) -> testConfig.ConfNodeBase:
-        if task_role == TaskRole.CLIENT:
-            return self.node_client
-        if task_role == TaskRole.SERVER:
-            return self.node_server
-        raise ValueError()
 
     @property
     def clmo_barrier(self) -> threading.Barrier:

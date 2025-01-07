@@ -39,11 +39,11 @@ class TestSettings:
         # there is something wrong.
         self.connection
         self.test_case_id.info
-        self.conf_server
-        self.conf_client
+        self._node_server
+        self.node_client
 
     @property
-    def conf_server(self) -> testConfig.ConfServer:
+    def _node_server(self) -> testConfig.ConfNodeServer:
         # For now, only one server/client is supported and TestConfig already
         # enforces that. Do tuple-unpacking here, to further assert that there
         # is only one server/client.
@@ -51,7 +51,7 @@ class TestSettings:
         return c_server
 
     @property
-    def conf_client(self) -> testConfig.ConfClient:
+    def node_client(self) -> testConfig.ConfNodeClient:
         # For now, only one server/client is supported and TestConfig already
         # enforces that. Do tuple-unpacking here, to further assert that there
         # is only one server/client.
@@ -59,17 +59,17 @@ class TestSettings:
         return c_client
 
     @property
-    def conf_server_used(self) -> testConfig.ConfBaseClientServer:
+    def node_server(self) -> testConfig.ConfNodeBase:
         if self.test_case_id.info.is_same_node:
-            return self.conf_client
+            return self.node_client
         else:
-            return self.conf_server
+            return self._node_server
 
-    def conf_clientserver(self, task_role: TaskRole) -> testConfig.ConfBaseClientServer:
+    def node_for_role(self, task_role: TaskRole) -> testConfig.ConfNodeBase:
         if task_role == TaskRole.CLIENT:
-            return self.conf_client
+            return self.node_client
         if task_role == TaskRole.SERVER:
-            return self.conf_server_used
+            return self.node_server
         raise ValueError()
 
     @property
@@ -128,11 +128,11 @@ class TestSettings:
 
     @property
     def server_pod_type(self) -> tftbase.PodType:
-        return self.test_case_id.info.get_server_pod_type(self.conf_server.pod_type)
+        return self.test_case_id.info.get_server_pod_type(self._node_server.pod_type)
 
     @property
     def client_pod_type(self) -> tftbase.PodType:
-        return self.test_case_id.info.get_client_pod_type(self.conf_client.pod_type)
+        return self.test_case_id.info.get_client_pod_type(self.node_client.pod_type)
 
     @property
     def connection_mode(self) -> tftbase.ConnectionMode:
@@ -140,11 +140,11 @@ class TestSettings:
 
     def get_test_info(self) -> str:
         return f"""type={self.connection.test_type.name}, test-case={self.test_case_id.name}: {self.client_pod_type.name} pod to {self.connection_mode.name} to {self.server_pod_type.name} pod - {self.test_case_id.info.node_location}
-        Client Node: {self.conf_client.name}
+        Client Node: {self.node_client.name}
             Tenant={self.client_is_tenant}
             Index={self.client_index}
-        Server Node: {self.conf_server_used.name}
-            Exec Persistence: {self.conf_server.persistent}
+        Server Node: {self.node_server.name}
+            Exec Persistence: {self._node_server.persistent}
             Tenant={self.server_is_tenant}
             Index={self.server_index}"""
 
@@ -163,13 +163,13 @@ class TestSettings:
             test_type=self.connection.test_type,
             reverse=self.reverse,
             server=PodInfo(
-                name=self.conf_server_used.name,
+                name=self.node_server.name,
                 pod_type=self.server_pod_type,
                 is_tenant=self.server_is_tenant,
                 index=self.client_index,
             ),
             client=PodInfo(
-                name=self.conf_client.name,
+                name=self.node_client.name,
                 pod_type=self.client_pod_type,
                 is_tenant=self.client_is_tenant,
                 index=self.client_index,

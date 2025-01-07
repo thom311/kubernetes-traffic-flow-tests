@@ -52,7 +52,7 @@ def _check_plugin_name(
         ) from None
 
 
-T2 = TypeVar("T2", bound="ConfServer | ConfClient")
+T2 = TypeVar("T2", bound="ConfNodeServer | ConfNodeClient")
 
 
 @strict_dataclass
@@ -65,7 +65,7 @@ class _ConfBaseConnectionItem(StructParseBaseNamed, abc.ABC):
 
 @strict_dataclass
 @dataclass(frozen=True, kw_only=True)
-class ConfBaseClientServer(_ConfBaseConnectionItem, abc.ABC):
+class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
     sriov: bool
     pod_type: PodType
     default_network: str
@@ -131,7 +131,7 @@ class ConfBaseClientServer(_ConfBaseConnectionItem, abc.ABC):
 
             type_specific_kwargs = {}
 
-            if conf_type == ConfServer:
+            if conf_type == ConfNodeServer:
                 persistent = common.structparse_pop_bool(
                     varg.for_key("persistent"),
                     default=False,
@@ -190,7 +190,7 @@ class ConfPlugin(_ConfBaseConnectionItem):
 
 @strict_dataclass
 @dataclass(frozen=True, kw_only=True)
-class ConfServer(ConfBaseClientServer):
+class ConfNodeServer(ConfNodeBase):
     persistent: bool
 
     def serialize(self) -> dict[str, Any]:
@@ -200,16 +200,16 @@ class ConfServer(ConfBaseClientServer):
         }
 
     @staticmethod
-    def parse(pctx: StructParseParseContext) -> "ConfServer":
-        return ConfBaseClientServer._parse(ConfServer, pctx)
+    def parse(pctx: StructParseParseContext) -> "ConfNodeServer":
+        return ConfNodeBase._parse(ConfNodeServer, pctx)
 
 
 @strict_dataclass
 @dataclass(frozen=True, kw_only=True)
-class ConfClient(ConfBaseClientServer):
+class ConfNodeClient(ConfNodeBase):
     @staticmethod
-    def parse(pctx: StructParseParseContext) -> "ConfClient":
-        return ConfBaseClientServer._parse(ConfClient, pctx)
+    def parse(pctx: StructParseParseContext) -> "ConfNodeClient":
+        return ConfNodeBase._parse(ConfNodeClient, pctx)
 
 
 @strict_dataclass
@@ -218,8 +218,8 @@ class ConfConnection(StructParseBaseNamed):
     test_type: TestType
     test_type_handler: TestTypeHandler
     instances: int
-    server: tuple[ConfServer, ...]
-    client: tuple[ConfClient, ...]
+    server: tuple[ConfNodeServer, ...]
+    client: tuple[ConfNodeClient, ...]
     plugins: tuple[ConfPlugin, ...]
     secondary_network_nad: Optional[str]
     resource_name: Optional[str]
@@ -300,12 +300,12 @@ class ConfConnection(StructParseBaseNamed):
 
             server = common.structparse_pop_objlist(
                 varg.for_key("server"),
-                construct=ConfServer.parse,
+                construct=ConfNodeServer.parse,
             )
 
             client = common.structparse_pop_objlist(
                 varg.for_key("client"),
-                construct=ConfClient.parse,
+                construct=ConfNodeClient.parse,
             )
 
             plugins = common.structparse_pop_objlist(
@@ -766,12 +766,12 @@ class ConfigDescriptor:
             raise RuntimeError("No connections_idx set")
         return self.get_tft().connections[self.connections_idx]
 
-    def get_server(self) -> ConfServer:
+    def get_server(self) -> ConfNodeServer:
         c = self.get_connection()
         assert len(c.server) == 1
         return c.server[0]
 
-    def get_client(self) -> ConfClient:
+    def get_client(self) -> ConfNodeClient:
         c = self.get_connection()
         assert len(c.client) == 1
         return c.client[0]

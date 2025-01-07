@@ -140,9 +140,12 @@ def test_test_case_typ_infos() -> None:
             and ti1.is_client_hostbacked == ti2.is_client_hostbacked
         )
 
-    # FIXME: the following TestCaseType pairs are identical configuration.
-    # That is not right. If you run those two tests, the exact same thing will
-    # be tested.
+    # Due to a bug, some TestCaseType exhibit identical behaviors as others.
+    # Those have "deprecated_alias_for" fields set. The following is the list
+    # of those tuples, and we test for that.
+    #
+    # Note that those types were added by mistake and exist for backward
+    # compatibility. Don't add more such types.
     identical_cases = (
         (
             TestCaseType.POD_TO_NODE_PORT_TO_POD_SAME_NODE,
@@ -165,16 +168,39 @@ def test_test_case_typ_infos() -> None:
             TestCaseType.HOST_TO_EXTERNAL,
         ),
     )
+    identical_cases_flat = [item for pair in identical_cases for item in pair]
+    assert len(identical_cases_flat) == len(
+        set(identical_cases_flat)
+    ), "There must be no duplicates in identical_cases list."
     for idx1, tt1 in enumerate(identical_cases):
+        # The items in "identical_cases" must be sorted ascendingly.
         assert tt1[0].value < tt1[1].value
         for idx2, tt2 in enumerate(identical_cases[idx1 + 1 :]):
             assert tt1[0].value < tt2[0].value
+    for idx1, tt1 in enumerate(identical_cases):
+        # In the "identical_cases" pairs, one of them must have "deprecated_alias_for"
+        # set and refer to the other.
+        if tt1[0].info.deprecated_alias_for is None:
+            assert tt1[1].info.deprecated_alias_for is not None
+            assert tt1[1].info.deprecated_alias_for == tt1[0]
+        else:
+            assert tt1[1].info.deprecated_alias_for is None
+            assert tt1[0].info.deprecated_alias_for == tt1[1]
+    for idx1, ti1 in enumerate(test_case_typ_infos):
+        if ti1.test_case_type not in identical_cases_flat:
+            assert (
+                ti1.deprecated_alias_for is None
+            ), 'TestCaseType that are not in "identical_cases" must have deprecated_alias_for unset'
     for idx1, ti1 in enumerate(test_case_typ_infos):
         for idx2, ti2 in enumerate(test_case_typ_infos[idx1 + 1 :]):
             if (ti1.test_case_type, ti2.test_case_type) in identical_cases:
                 assert _is_identical(ti1, ti2)
             else:
                 assert not _is_identical(ti1, ti2)
+    for idx1, ti1 in enumerate(test_case_typ_infos):
+        assert (
+            ti1.test_case_type == (list(TestCaseType))[idx1]
+        ), 'We expect that "_test_case_typ_infos" follows the same order as the values in the enum'
 
 
 def test_eval_binary_opt_in() -> None:

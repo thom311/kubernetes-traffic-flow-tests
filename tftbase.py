@@ -584,6 +584,11 @@ class TestCaseTypInfo:
     is_server_hostbacked: bool
     is_client_hostbacked: bool
 
+    # Due to a mistake, test case types that have "deprecated_alias_for" are
+    # identical to the alias that they are for. These only exist for backward
+    # compatiblity. Don't add more of such types.
+    deprecated_alias_for: Optional[TestCaseType] = None
+
     @property
     def node_location(self) -> str:
         if self.is_same_node:
@@ -684,6 +689,7 @@ _test_case_typ_infos = {
             is_same_node=True,
             is_server_hostbacked=False,
             is_client_hostbacked=False,
+            deprecated_alias_for=TestCaseType.POD_TO_NODE_PORT_TO_POD_SAME_NODE,
         ),
         TestCaseTypInfo(
             test_case_type=TestCaseType.POD_TO_NODE_PORT_TO_HOST_DIFF_NODE,
@@ -691,6 +697,7 @@ _test_case_typ_infos = {
             is_same_node=False,
             is_server_hostbacked=False,
             is_client_hostbacked=False,
+            deprecated_alias_for=TestCaseType.POD_TO_NODE_PORT_TO_POD_DIFF_NODE,
         ),
         TestCaseTypInfo(
             test_case_type=TestCaseType.HOST_TO_HOST_SAME_NODE,
@@ -698,6 +705,7 @@ _test_case_typ_infos = {
             is_same_node=True,
             is_server_hostbacked=False,
             is_client_hostbacked=True,
+            deprecated_alias_for=TestCaseType.HOST_TO_POD_SAME_NODE,
         ),
         TestCaseTypInfo(
             test_case_type=TestCaseType.HOST_TO_HOST_DIFF_NODE,
@@ -705,6 +713,7 @@ _test_case_typ_infos = {
             is_same_node=False,
             is_server_hostbacked=False,
             is_client_hostbacked=True,
+            deprecated_alias_for=TestCaseType.HOST_TO_POD_DIFF_NODE,
         ),
         TestCaseTypInfo(
             test_case_type=TestCaseType.HOST_TO_POD_SAME_NODE,
@@ -789,6 +798,7 @@ _test_case_typ_infos = {
             is_same_node=False,
             is_server_hostbacked=False,
             is_client_hostbacked=True,
+            deprecated_alias_for=TestCaseType.POD_TO_EXTERNAL,
         ),
         TestCaseTypInfo(
             test_case_type=TestCaseType.POD_TO_POD_2ND_INTERFACE_SAME_NODE,

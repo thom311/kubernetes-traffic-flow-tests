@@ -769,6 +769,21 @@ class ConfigDescriptor:
             raise RuntimeError("No test_cases_idx set")
         return self.get_tft().test_cases[self.test_cases_idx]
 
+    def test_case_skip_deprecated_alias(self) -> bool:
+        tc = self.get_test_case()
+        if tc.info.deprecated_alias_for is None:
+            # This is not an alias. We process it. Note that in this case we don't
+            # check for duplicates and if we have duplicated (non-aliased) test cases,
+            # we run them twice.
+            return False
+        if tc.info.deprecated_alias_for not in self.get_tft().test_cases:
+            # Process this alias, because the original doesn't appear in the list. Again,
+            # we don't check for duplicates of the alias.
+            return False
+        # The original value for the alias is present. We skip the alias, it would
+        # be the same as the original, and the user possibly doesn't want that.
+        return True
+
     def get_connection(self) -> ConfConnection:
         if self.connections_idx < 0:
             raise RuntimeError("No connections_idx set")

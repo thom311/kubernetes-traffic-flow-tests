@@ -752,7 +752,7 @@ class ServerTask(Task, ABC):
         else:
             raise ValueError("Invalid pod_type {pod_type}")
 
-        self.exec_persistent = ts._node_server.persistent
+        self.exec_persistent = ts.node_server.is_persistent_server
         self.port = port
         self.pod_type = pod_type
         self.connection_mode = ts.connection_mode

@@ -144,7 +144,7 @@ class TestSettings:
             Tenant={self.client_is_tenant}
             Index={self.client_index}
         Server Node: {self.node_server.name}
-            Exec Persistence: {self._node_server.persistent}
+            Exec Persistence: {self.node_server.is_persistent_server}
             Tenant={self.server_is_tenant}
             Index={self.server_index}"""
 

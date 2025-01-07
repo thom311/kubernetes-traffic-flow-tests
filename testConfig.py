@@ -74,6 +74,10 @@ class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
     # "type". These might be command line arguments passed to the tool.
     args: Optional[tuple[str, ...]]
 
+    @property
+    def is_persistent_server(self) -> bool:
+        return False
+
     def serialize(self) -> dict[str, Any]:
         d: dict[str, Any] = {}
         if self.args is not None:
@@ -192,6 +196,10 @@ class ConfPlugin(_ConfBaseConnectionItem):
 @dataclass(frozen=True, kw_only=True)
 class ConfNodeServer(ConfNodeBase):
     persistent: bool
+
+    @property
+    def is_persistent_server(self) -> bool:
+        return self.persistent
 
     def serialize(self) -> dict[str, Any]:
         return {

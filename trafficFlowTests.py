@@ -3,7 +3,6 @@ import task
 
 from pathlib import Path
 
-from ktoolbox import common
 from ktoolbox import host
 
 import testConfig
@@ -120,11 +119,6 @@ class TrafficFlowTests:
 
     def _run_test_case(self, cfg_descr: ConfigDescriptor) -> list[TftResult]:
         # TODO Allow for multiple connections / instances to run simultaneously
-        if cfg_descr.test_case_skip_deprecated_alias():
-            logger.info(
-                f"Skip test case {cfg_descr.get_test_case().name}). This is an alias for {common.unwrap(cfg_descr.get_test_case().info.deprecated_alias_for).name})."
-            )
-            return []
         tft_results: list[TftResult] = []
         for cfg_descr2 in cfg_descr.describe_all_connections():
             connection = cfg_descr2.get_connection()

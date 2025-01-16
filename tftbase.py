@@ -133,10 +133,6 @@ class TestCaseType(Enum):
     POD_TO_CLUSTER_IP_TO_HOST_DIFF_NODE = 8
     POD_TO_NODE_PORT_TO_POD_SAME_NODE = 9
     POD_TO_NODE_PORT_TO_POD_DIFF_NODE = 10
-    POD_TO_NODE_PORT_TO_HOST_SAME_NODE = 11
-    POD_TO_NODE_PORT_TO_HOST_DIFF_NODE = 12
-    HOST_TO_HOST_SAME_NODE = 13
-    HOST_TO_HOST_DIFF_NODE = 14
     HOST_TO_POD_SAME_NODE = 15
     HOST_TO_POD_DIFF_NODE = 16
     HOST_TO_CLUSTER_IP_TO_POD_SAME_NODE = 17
@@ -148,7 +144,6 @@ class TestCaseType(Enum):
     HOST_TO_NODE_PORT_TO_HOST_SAME_NODE = 23
     HOST_TO_NODE_PORT_TO_HOST_DIFF_NODE = 24
     POD_TO_EXTERNAL = 25
-    HOST_TO_EXTERNAL = 26
     POD_TO_POD_2ND_INTERFACE_SAME_NODE = 27
     POD_TO_POD_2ND_INTERFACE_DIFF_NODE = 28
     POD_TO_POD_MULTI_NETWORK_POLICY = 29
@@ -584,11 +579,6 @@ class TestCaseTypInfo:
     is_server_hostbacked: bool
     is_client_hostbacked: bool
 
-    # Due to a mistake, test case types that have "deprecated_alias_for" are
-    # identical to the alias that they are for. These only exist for backward
-    # compatiblity. Don't add more of such types.
-    deprecated_alias_for: Optional[TestCaseType] = None
-
     @property
     def node_location(self) -> str:
         if self.is_same_node:
@@ -684,38 +674,6 @@ _test_case_typ_infos = {
             is_client_hostbacked=False,
         ),
         TestCaseTypInfo(
-            test_case_type=TestCaseType.POD_TO_NODE_PORT_TO_HOST_SAME_NODE,
-            connection_mode=ConnectionMode.NODE_PORT_IP,
-            is_same_node=True,
-            is_server_hostbacked=False,
-            is_client_hostbacked=False,
-            deprecated_alias_for=TestCaseType.POD_TO_NODE_PORT_TO_POD_SAME_NODE,
-        ),
-        TestCaseTypInfo(
-            test_case_type=TestCaseType.POD_TO_NODE_PORT_TO_HOST_DIFF_NODE,
-            connection_mode=ConnectionMode.NODE_PORT_IP,
-            is_same_node=False,
-            is_server_hostbacked=False,
-            is_client_hostbacked=False,
-            deprecated_alias_for=TestCaseType.POD_TO_NODE_PORT_TO_POD_DIFF_NODE,
-        ),
-        TestCaseTypInfo(
-            test_case_type=TestCaseType.HOST_TO_HOST_SAME_NODE,
-            connection_mode=ConnectionMode.POD_IP,
-            is_same_node=True,
-            is_server_hostbacked=False,
-            is_client_hostbacked=True,
-            deprecated_alias_for=TestCaseType.HOST_TO_POD_SAME_NODE,
-        ),
-        TestCaseTypInfo(
-            test_case_type=TestCaseType.HOST_TO_HOST_DIFF_NODE,
-            connection_mode=ConnectionMode.POD_IP,
-            is_same_node=False,
-            is_server_hostbacked=False,
-            is_client_hostbacked=True,
-            deprecated_alias_for=TestCaseType.HOST_TO_POD_DIFF_NODE,
-        ),
-        TestCaseTypInfo(
             test_case_type=TestCaseType.HOST_TO_POD_SAME_NODE,
             connection_mode=ConnectionMode.POD_IP,
             is_same_node=True,
@@ -791,14 +749,6 @@ _test_case_typ_infos = {
             is_same_node=False,
             is_server_hostbacked=False,
             is_client_hostbacked=True,
-        ),
-        TestCaseTypInfo(
-            test_case_type=TestCaseType.HOST_TO_EXTERNAL,
-            connection_mode=ConnectionMode.EXTERNAL_IP,
-            is_same_node=False,
-            is_server_hostbacked=False,
-            is_client_hostbacked=True,
-            deprecated_alias_for=TestCaseType.POD_TO_EXTERNAL,
         ),
         TestCaseTypInfo(
             test_case_type=TestCaseType.POD_TO_POD_2ND_INTERFACE_SAME_NODE,

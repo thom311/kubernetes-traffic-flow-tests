@@ -25,6 +25,7 @@ from ktoolbox import netdev
 from ktoolbox import kjinja2
 from ktoolbox.k8sClient import K8sClient
 
+import testConfig
 import tftbase
 
 from pluginbase import Plugin
@@ -279,8 +280,16 @@ class Task(ABC):
         return f"{self.log_name}.setup"
 
     @property
+    def node(self) -> testConfig.ConfNodeBase:
+        if self.task_role == TaskRole.CLIENT:
+            return self.ts.node_client
+        if self.task_role == TaskRole.SERVER:
+            return self.ts.node_server
+        raise ValueError()
+
+    @property
     def node_name(self) -> str:
-        return self.ts.conf_clientserver(self.task_role).name
+        return self.node.name
 
     def get_namespace(self) -> str:
         return self.ts.cfg_descr.get_tft().namespace
@@ -752,7 +761,7 @@ class ServerTask(Task, ABC):
         else:
             raise ValueError("Invalid pod_type {pod_type}")
 
-        self.exec_persistent = ts.conf_server.persistent
+        self.exec_persistent = ts.node_server.is_persistent_server
         self.port = port
         self.pod_type = pod_type
         self.connection_mode = ts.connection_mode
@@ -769,7 +778,7 @@ class ServerTask(Task, ABC):
 
         return {
             **super().get_template_args(),
-            "default_network": self.ts.conf_server.default_network,
+            "default_network": self.ts.node_server.default_network,
             **extra_args,
         }
 
@@ -923,7 +932,7 @@ class ClientTask(Task, ABC):
     def get_template_args(self) -> dict[str, str | list[str]]:
         return {
             **super().get_template_args(),
-            "default_network": self.ts.conf_client.default_network,
+            "default_network": self.ts.node_client.default_network,
             "pod_name": self.pod_name,
         }
 

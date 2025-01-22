@@ -563,8 +563,7 @@ class TestConfig:
     configpath: Optional[str]
     configdir: str
     cwddir: str
-    kubeconfig: str
-    kubeconfig_infra: Optional[str]
+    _kubeconfig_pair: Optional[tuple[str, Optional[str]]]
     _client_tenant: Optional[K8sClient]
     _client_infra: Optional[K8sClient]
     _lock: threading.Lock
@@ -578,11 +577,16 @@ class TestConfig:
         return ClusterMode.DPU
 
     @staticmethod
-    def _detect_kubeconfigs() -> tuple[str, Optional[str]]:
+    def _detect_kubeconfigs(
+        *,
+        configpath: Optional[str],
+        cwd: str,
+    ) -> tuple[str, Optional[str]]:
 
         # Find out what type of cluster are we in.
 
-        kubeconfig: str
+        err_msg: Optional[str] = None
+        kubeconfig: str = ""
         kubeconfig_infra: Optional[str] = None
 
         if host.local.file_exists(TestConfig.KUBECONFIG_SINGLE):
@@ -594,12 +598,20 @@ class TestConfig:
                 kubeconfig = TestConfig.KUBECONFIG_TENANT
                 kubeconfig_infra = TestConfig.KUBECONFIG_INFRA
             else:
-                raise RuntimeError(
-                    "Assuming DPU...Cannot Find Infrastructure Cluster Config"
-                )
+                err_msg = f"misses kubeconfig_infra file {repr(TestConfig.KUBECONFIG_INFRA)} while having a kubeconfig {repr(TestConfig.KUBECONFIG_TENANT)}"
         else:
-            raise RuntimeError("Cannot Find Kubeconfig")
+            err_msg = f"neither have any of the default kubeconfig files {repr([TestConfig.KUBECONFIG_SINGLE, TestConfig.KUBECONFIG_CX, TestConfig.KUBECONFIG_TENANT])}"
 
+        if err_msg is not None:
+            prefix = f" {repr(configpath)}" if configpath else ""
+            raise RuntimeError(
+                f"kubeconfig not specified in configuration{prefix} and {err_msg}"
+            )
+
+        kubeconfig = common.path_norm(kubeconfig, cwd=cwd)
+        kubeconfig_infra = common.path_norm(kubeconfig_infra, cwd=cwd)
+        assert kubeconfig
+        assert kubeconfig_infra is None or kubeconfig_infra
         return (kubeconfig, kubeconfig_infra)
 
     def __init__(
@@ -663,62 +675,70 @@ class TestConfig:
             output_base = None
         self.output_base = output_base
 
-        kubeconfigs_cwd = cwddir
+        kubconfig_pair: tuple[Optional[str], Optional[str]]
         if kubeconfigs is not None:
-            kubeconfigs_pair = kubeconfigs
-        elif self.config.kubeconfig is not None:
-            kubeconfigs_pair = (self.config.kubeconfig, self.config.kubeconfig_infra)
-            kubeconfigs_cwd = configdir
+            kubconfig_pair = kubeconfigs
+            kubeconfigs_cwd = cwddir
         else:
-            kubeconfigs_pair = TestConfig._detect_kubeconfigs()
-        kubeconfig1, kubeconfig_infra1 = kubeconfigs_pair
-        if not isinstance(kubeconfig1, str):
-            if kubeconfigs is not None:
-                raise ValueError("Missing kubeconfig in arguments")
-            p = (f" {repr(config_path)}") if config_path else ""
-            raise ValueError(
-                f"kubeconfig is neither specified in the configuration{p} nor detected in /root"
+            kubconfig_pair = (self.config.kubeconfig, self.config.kubeconfig_infra)
+            kubeconfigs_cwd = configdir
+        kubeconfig, kubeconfig_infra = kubconfig_pair
+        assert kubeconfig is None or kubeconfig
+        assert kubeconfig_infra is None or kubeconfig_infra
+        assert kubeconfig_infra is None or kubeconfig is not None
+        if kubeconfig is not None:
+            self._kubeconfig_pair = (
+                common.path_norm(kubeconfig, cwd=kubeconfigs_cwd),
+                common.path_norm(kubeconfig_infra, cwd=kubeconfigs_cwd),
             )
-        kubeconfig1 = common.path_norm(kubeconfig1, cwd=kubeconfigs_cwd)
-        kubeconfig_infra1 = common.path_norm(kubeconfig_infra1, cwd=kubeconfigs_cwd)
-
-        self.kubeconfig = kubeconfig1
-        self.kubeconfig_infra = kubeconfig_infra1
+        else:
+            self._kubeconfig_pair = None
 
         self.evaluator_config = evaluator_config
 
-        s = json.dumps(full_config["tft"])
-        logger.info(f"config: KUBECONFIG={shlex.quote(self.kubeconfig)}")
-        if self.kubeconfig_infra is not None:
-            logger.info(
-                f"config: KUBECONFIG_INFRA={shlex.quote(self.kubeconfig_infra)}"
+    @property
+    def kubeconfig(self) -> str:
+        kubeconfig, kubeconfig_infra = self._get_kubeconfigs()
+        return kubeconfig
+
+    @property
+    def kubeconfig_infra(self) -> Optional[str]:
+        kubeconfig, kubeconfig_infra = self._get_kubeconfigs()
+        return kubeconfig_infra
+
+    def _get_kubeconfigs(self) -> tuple[str, Optional[str]]:
+        with self._lock:
+            return self._get_kubeconfigs_with_lock()
+
+    def _get_kubeconfigs_with_lock(self) -> tuple[str, Optional[str]]:
+        if self._kubeconfig_pair is None:
+            self._kubeconfig_pair = TestConfig._detect_kubeconfigs(
+                configpath=self.configpath,
+                cwd=self.cwddir,
             )
-        if self.evaluator_config is not None:
-            logger.info(f"config: EVAL_CONFIG={shlex.quote(self.evaluator_config)}")
-        logger.info(f"config: {s}")
-        logger.debug(f"config-full: {self.config.serialize_json()}")
+        kubeconfig, kubeconfig_infra = self._kubeconfig_pair
+        assert kubeconfig
+        assert kubeconfig_infra is None or kubeconfig_infra
+        assert kubeconfig_infra is None or kubeconfig is not None
+        return kubeconfig, kubeconfig_infra
 
     def client(self, *, tenant: bool) -> K8sClient:
         with self._lock:
+            kubeconfig, kubeconfig_infra = self._get_kubeconfigs_with_lock()
             if tenant:
                 client = self._client_tenant
             else:
-                if self.kubeconfig_infra is None:
+                if kubeconfig_infra is None:
                     raise RuntimeError("TestConfig has no infra client")
                 client = self._client_infra
 
-            if client is not None:
-                return client
+            if client is None:
+                if tenant:
+                    self._client_tenant = (client := K8sClient(kubeconfig))
+                else:
+                    self._client_infra = (client := K8sClient(kubeconfig_infra))
 
-            # Construct the K8sClient on first.
-
-            if tenant:
-                self._client_tenant = K8sClient(self.kubeconfig)
-            else:
-                assert self.kubeconfig_infra is not None
-                self._client_infra = K8sClient(self.kubeconfig_infra)
-
-        return self.client(tenant=tenant)
+            return client
 
     @property
     def client_tenant(self) -> K8sClient:
@@ -727,6 +747,80 @@ class TestConfig:
     @property
     def client_infra(self) -> K8sClient:
         return self.client(tenant=False)
+
+    def _system_check_kubeconfig(
+        self,
+        tenant: bool,
+    ) -> None:
+
+        kubeconfig: Optional[str]
+        if tenant:
+            kubeconfig = self.kubeconfig
+            config_name = "kubeconfig"
+            config_value = self.config.kubeconfig
+        else:
+            kubeconfig = self.kubeconfig_infra
+            if kubeconfig is None:
+                return
+            config_name = "kubeconfig_infra"
+            config_value = self.config.kubeconfig_infra
+
+        try:
+            self.client(tenant=tenant)
+        except Exception:
+            if not os.path.exists(kubeconfig):
+                fail_msg = f"file {repr(kubeconfig)} does not exist"
+            else:
+                fail_msg = f"file {repr(kubeconfig)} is not a valid KUBECONFIG"
+        else:
+            return
+
+        msg_path = f" {repr(self.configpath)}" if self.configpath else ""
+        msg_source = ""
+
+        if config_value is not None:
+            msg_source = f'key ".{config_name}"'
+        else:
+            msg_source = f"autodetected {config_name}"
+
+        raise ValueError(
+            f"configuration{msg_path} is invalid: {msg_source} fails because {fail_msg}"
+        )
+
+    def system_check(self) -> None:
+        self._system_check_kubeconfig(tenant=True)
+        self._system_check_kubeconfig(tenant=False)
+
+        if self.evaluator_config is not None:
+            if not os.path.exists(self.evaluator_config):
+                raise ValueError(
+                    "evaluator_config file {shlex.quote(self.evaluator_config) does not exist"
+                )
+
+    def log_config(self, *, logger: logging.Logger = logger) -> None:
+        s = json.dumps(self.full_config["tft"])
+
+        with self._lock:
+            # In all other cases, accessing kubeconfig will initialize the
+            # value.  But for logging, we look at it, and if it's not yet
+            # initialized, log that it's unknown yet.
+            kubeconfig: Optional[str] = None
+            kubeconfig_infra: Optional[str] = None
+            if self._kubeconfig_pair:
+                kubeconfig, kubeconfig_infra = self._kubeconfig_pair
+        if kubeconfig is not None:
+            logger.info(f"config: KUBECONFIG={shlex.quote(kubeconfig)}")
+        else:
+            logger.info(
+                "config: KUBECONFIG is not specified in YAML configuration and not (yet) detected"
+            )
+        if kubeconfig_infra is not None:
+            logger.info(f"config: KUBECONFIG_INFRA={shlex.quote(kubeconfig_infra)}")
+
+        if self.evaluator_config is not None:
+            logger.info(f"config: EVAL_CONFIG={shlex.quote(self.evaluator_config)}")
+        logger.info(f"config: {s}")
+        logger.debug(f"config-full: {self.config.serialize_json()}")
 
 
 @strict_dataclass

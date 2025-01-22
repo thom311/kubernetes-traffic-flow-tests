@@ -180,6 +180,7 @@ kubeconfig_infra: /path/to/kubeconfig_infra
 
     assert tc.config.kubeconfig == "/path/to/kubeconfig"
     assert tc.config.kubeconfig_infra == "/path/to/kubeconfig_infra"
+    assert tc._kubeconfig_pair == (tc.config.kubeconfig, tc.config.kubeconfig_infra)
     assert tc.kubeconfig == tc.config.kubeconfig
     assert tc.kubeconfig_infra == tc.config.kubeconfig_infra
 

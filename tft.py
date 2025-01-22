@@ -69,6 +69,8 @@ def main() -> None:
         evaluator_config=args.evaluator_config,
         output_base=args.output_base,
     )
+    tc.system_check()
+    tc.log_config()
     tft = TrafficFlowTests()
 
     evaluator = Evaluator(tc.evaluator_config)

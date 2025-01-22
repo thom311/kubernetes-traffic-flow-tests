@@ -567,7 +567,7 @@ class TestConfig:
     kubeconfig_infra: Optional[str]
     _client_tenant: Optional[K8sClient]
     _client_infra: Optional[K8sClient]
-    _client_lock: threading.Lock
+    _lock: threading.Lock
     evaluator_config: Optional[str]
     output_base: Optional[str]
 
@@ -655,7 +655,7 @@ class TestConfig:
         self.cwddir = cwddir
         self.configpath = config_path
 
-        self._client_lock = threading.Lock()
+        self._lock = threading.Lock()
         self._client_tenant = None
         self._client_infra = None
 
@@ -699,7 +699,7 @@ class TestConfig:
         logger.debug(f"config-full: {self.config.serialize_json()}")
 
     def client(self, *, tenant: bool) -> K8sClient:
-        with self._client_lock:
+        with self._lock:
             if tenant:
                 client = self._client_tenant
             else:

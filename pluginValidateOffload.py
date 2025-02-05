@@ -157,7 +157,7 @@ class TaskValidateOffload(PluginTask):
             tenant=tenant,
         )
 
-        self.in_file_template = "./manifests/tools-pod.yaml.j2"
+        self.in_file_template = tftbase.get_manifest("tools-pod.yaml.j2")
         self.out_file_yaml = (
             f"./manifests/yamls/tools-pod-{self.node_name}-validate-offload.yaml"
         )

@@ -165,3 +165,23 @@ def test_eval_binary_opt_in() -> None:
 
     assert tftbase.eval_binary_opt_in(True, False) == (True, False)
     assert tftbase.eval_binary_opt_in(False, True) == (False, True)
+
+
+def test_tftfile() -> None:
+    f = tftbase.tftfile("manifests/host-pod.yaml.j2")
+    assert f == tftbase.tftfile("manifests", "host-pod.yaml.j2")
+    assert f == tftbase.tftfile("manifests", "./host-pod.yaml.j2")
+    assert os.path.exists(f)
+    assert f.endswith("/manifests/host-pod.yaml.j2")
+
+
+def test_get_manifest() -> None:
+    if os.getenv(tftbase.ENV_TFT_MANIFESTS_OVERRIDES):
+        return
+
+    f = tftbase.get_manifest("host-pod.yaml.j2")
+    assert f in (
+        tftbase.tftfile("manifests/host-pod.yaml.j2"),
+        tftbase.tftfile("manifests/overrides/host-pod.yaml.j2"),
+    )
+    assert os.path.exists(f)

@@ -89,14 +89,14 @@ def tftfile(*components: str) -> str:
 def get_manifests_overrides() -> Optional[str]:
     d = get_environ(ENV_TFT_MANIFESTS_OVERRIDES)
     if d:
-        if d == "":
-            return None
         d2 = common.path_norm(d, cwd=cwd)
         if not os.path.isdir(d2):
             raise ValueError(
-                "Manifest overrides directory {repr(d2)} ({ENV_TFT_TEST_IMAGE}={shlex.quote(d)}) does not exist"
+                "Manifest overrides directory {repr(d2)} ({ENV_TFT_MANIFESTS_OVERRIDES}={shlex.quote(d)}) does not exist"
             )
         return d2
+    if d == "":
+        return None
     return tftfile("manifests/overrides")
 
 

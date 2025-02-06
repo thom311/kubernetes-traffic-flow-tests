@@ -53,8 +53,8 @@ class TaskMeasureCPU(PluginTask):
         )
 
         self.in_file_template = tftbase.get_manifest("tools-pod.yaml.j2")
-        self.out_file_yaml = (
-            f"./manifests/yamls/tools-pod-{self.node_name}-measure-cpu.yaml"
+        self.out_file_yaml = tftbase.get_manifest_renderpath(
+            f"tools-pod-{self.node_name}-measure-cpu.yaml"
         )
         self.pod_name = f"tools-pod-{self.node_name}-measure-cpu"
 

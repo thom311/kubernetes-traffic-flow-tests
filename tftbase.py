@@ -29,6 +29,7 @@ ENV_TFT_TEST_IMAGE_DEFAULT = (
 )
 
 ENV_TFT_MANIFESTS_OVERRIDES = "TFT_MANIFESTS_OVERRIDES"
+ENV_TFT_MANIFESTS_YAMLS = "TFT_MANIFESTS_YAMLS"
 
 
 def get_environ(name: str) -> Optional[str]:
@@ -69,6 +70,40 @@ def get_tft_image_pull_policy() -> str:
     return s
 
 
+@functools.cache
+def get_tft_manifests_overrides() -> Optional[str]:
+    d = get_environ(ENV_TFT_MANIFESTS_OVERRIDES)
+    if d:
+        path = common.path_norm(d, cwd=cwd)
+    elif d == "":
+        path = None
+    else:
+        path = tftfile("manifests/overrides")
+
+    # We don't check whether the overrides directory exist. Since the
+    # individual overrides files are optional, so is the entire directory.
+
+    logger.info(f"env: {ENV_TFT_MANIFESTS_OVERRIDES}={shlex.quote(path or '')}")
+    return path
+
+
+@functools.cache
+def get_tft_manifests_yamls() -> str:
+    d = get_environ(ENV_TFT_MANIFESTS_YAMLS)
+    if d:
+        path = common.path_norm(d, cwd=cwd)
+    else:
+        path = tftfile("manifests/yamls")
+
+    if not os.path.isdir(path):
+        raise RuntimeError(
+            f"{ENV_TFT_MANIFESTS_YAMLS} output directory {shlex.quote(path)} does not exist"
+        )
+
+    logger.info(f"env: {ENV_TFT_MANIFESTS_YAMLS}={shlex.quote(path)}")
+    return path
+
+
 TFT_TESTS = "tft-tests"
 
 
@@ -86,24 +121,9 @@ def tftfile(*components: str) -> str:
 
 
 @functools.cache
-def get_manifests_overrides() -> Optional[str]:
-    d = get_environ(ENV_TFT_MANIFESTS_OVERRIDES)
-    if d:
-        if d == "":
-            return None
-        d2 = common.path_norm(d, cwd=cwd)
-        if not os.path.isdir(d2):
-            raise ValueError(
-                "Manifest overrides directory {repr(d2)} ({ENV_TFT_TEST_IMAGE}={shlex.quote(d)}) does not exist"
-            )
-        return d2
-    return tftfile("manifests/overrides")
-
-
-@functools.cache
 def get_manifest(filename: str) -> str:
     assert ".." not in filename.split("/")
-    overrides = get_manifests_overrides()
+    overrides = get_tft_manifests_overrides()
     if overrides is not None:
         f1 = common.path_norm(overrides + "/" + filename, cwd=cwd)
         if os.path.exists(f1):
@@ -117,6 +137,11 @@ def get_manifest(filename: str) -> str:
     raise ValueError(
         f"Could not find manifest file {repr(filename)}. Checked in {msg}{repr(f2)}."
     )
+
+
+@functools.cache
+def get_manifest_renderpath(filename: str) -> str:
+    return common.path_norm(get_tft_manifests_yamls() + "/" + filename)
 
 
 def eval_binary_opt_in(

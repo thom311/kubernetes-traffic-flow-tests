@@ -121,3 +121,5 @@ Simply run the python application as so:
 - `TFT_MANIFESTS_OVERRIDE` to specify an overrides directory for manifests. If not set, the
      default is "manifests/overrides". If set to empty, no overrides are used. You can place
      your own variants of the files from "manifests" directory and they will be preferred.
+- `TFT_MANIFESTS_YAMLS` to specify the output directory for rendered manifests. This
+     defaults to "manifests/yamls".

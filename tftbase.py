@@ -28,6 +28,8 @@ ENV_TFT_TEST_IMAGE_DEFAULT = (
     "ghcr.io/ovn-kubernetes/kubernetes-traffic-flow-tests:latest"
 )
 
+ENV_TFT_MANIFESTS_OVERRIDES = "TFT_MANIFESTS_OVERRIDES"
+
 
 def get_environ(name: str) -> Optional[str]:
     # Some environment variables are honored as configuration.
@@ -71,6 +73,50 @@ TFT_TESTS = "tft-tests"
 
 
 T = typing.TypeVar("T")
+
+
+cwd = os.getcwd()
+
+basedir = common.path_norm(os.path.dirname(__file__), cwd=cwd)
+
+
+def tftfile(*components: str) -> str:
+    f = basedir + "/" + "/".join(components)
+    return common.path_norm(f)
+
+
+@functools.cache
+def get_manifests_overrides() -> Optional[str]:
+    d = get_environ(ENV_TFT_MANIFESTS_OVERRIDES)
+    if d:
+        if d == "":
+            return None
+        d2 = common.path_norm(d, cwd=cwd)
+        if not os.path.isdir(d2):
+            raise ValueError(
+                "Manifest overrides directory {repr(d2)} ({ENV_TFT_TEST_IMAGE}={shlex.quote(d)}) does not exist"
+            )
+        return d2
+    return tftfile("manifests/overrides")
+
+
+@functools.cache
+def get_manifest(filename: str) -> str:
+    assert ".." not in filename.split("/")
+    overrides = get_manifests_overrides()
+    if overrides is not None:
+        f1 = common.path_norm(overrides + "/" + filename, cwd=cwd)
+        if os.path.exists(f1):
+            return f1
+    f2 = tftfile("manifests", filename)
+    if os.path.exists(f2):
+        return f2
+    msg = ""
+    if overrides is not None:
+        msg = f"{repr(f1)} and "
+    raise ValueError(
+        f"Could not find manifest file {repr(filename)}. Checked in {msg}{repr(f2)}."
+    )
 
 
 def eval_binary_opt_in(

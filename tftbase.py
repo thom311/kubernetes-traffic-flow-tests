@@ -29,6 +29,7 @@ ENV_TFT_TEST_IMAGE_DEFAULT = (
 )
 
 ENV_TFT_MANIFESTS_OVERRIDES = "TFT_MANIFESTS_OVERRIDES"
+ENV_TFT_MANIFESTS_YAMLS = "TFT_MANIFESTS_YAMLS"
 
 
 def get_environ(name: str) -> Optional[str]:
@@ -86,6 +87,23 @@ def get_tft_manifests_overrides() -> Optional[str]:
     return path
 
 
+@functools.cache
+def get_tft_manifests_yamls() -> str:
+    d = get_environ(ENV_TFT_MANIFESTS_YAMLS)
+    if d:
+        path = common.path_norm(d, cwd=cwd)
+    else:
+        path = tftfile("manifests/yamls")
+
+    if not os.path.isdir(path):
+        raise RuntimeError(
+            f"{ENV_TFT_MANIFESTS_YAMLS} output directory {shlex.quote(path)} does not exist"
+        )
+
+    logger.info(f"env: {ENV_TFT_MANIFESTS_YAMLS}={shlex.quote(path)}")
+    return path
+
+
 TFT_TESTS = "tft-tests"
 
 
@@ -119,6 +137,11 @@ def get_manifest(filename: str) -> str:
     raise ValueError(
         f"Could not find manifest file {repr(filename)}. Checked in {msg}{repr(f2)}."
     )
+
+
+@functools.cache
+def get_manifest_renderpath(filename: str) -> str:
+    return common.path_norm(get_tft_manifests_yamls() + "/" + filename)
 
 
 def eval_binary_opt_in(

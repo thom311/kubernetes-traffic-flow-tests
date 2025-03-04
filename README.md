@@ -118,7 +118,7 @@ Simply run the python application as so:
 - `TFT_IMAGE_PULL_POLICY` the image pull policy. One of `IfNotPresent`, `Always`, `Never`.
      Defaults to `IfNotPresent`m unless `$TFT_TEST_IMAGE` is set (in which case it defaults
      to `Always`).
-- `TFT_MANIFESTS_OVERRIDE` to specify an overrides directory for manifests. If not set, the
+- `TFT_MANIFESTS_OVERRIDES` to specify an overrides directory for manifests. If not set, the
      default is "manifests/overrides". If set to empty, no overrides are used. You can place
      your own variants of the files from "manifests" directory and they will be preferred.
 - `TFT_MANIFESTS_YAMLS` to specify the output directory for rendered manifests. This

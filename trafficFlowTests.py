@@ -52,6 +52,10 @@ class TrafficFlowTests:
         host.local.run(
             f"podman rm --force {task.EXTERNAL_PERF_SERVER}",
             log_level_fail=logging.WARN,
+            check_success=lambda r: (
+                r.success
+                or (r.returncode == 1 and "no container with name or ID" in r.err)
+            ),
         )
 
     def _create_log_paths_from_tests(self, test: testConfig.ConfTest) -> Path:

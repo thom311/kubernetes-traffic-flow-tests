@@ -50,7 +50,7 @@ class TrafficFlowTests:
             f"Cleaning external containers {task.EXTERNAL_PERF_SERVER} (if present)"
         )
         host.local.run(
-            f"podman rm --force --time 10 {task.EXTERNAL_PERF_SERVER}",
+            f"podman rm --force {task.EXTERNAL_PERF_SERVER}",
             log_level_fail=logging.WARN,
         )
 

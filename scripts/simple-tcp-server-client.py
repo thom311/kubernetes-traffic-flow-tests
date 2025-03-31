@@ -5,10 +5,12 @@ import os
 import random
 import socket
 import sys
+import shlex
 import time
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from typing import Any
 from typing import Callable
 from typing import Optional
 
@@ -229,6 +231,41 @@ def run_client(
         sleep_timeout("client", start_time, duration, sleep, done_msg=done_msg)
 
 
+def run_exec(
+    exec_url: str,
+    exec_args: list[str],
+    server: bool,
+    s_addr: str,
+    port: int,
+    duration: float,
+) -> None:
+    log_prefix = "server:" if server else "client: "
+
+    import urllib.request
+    import urllib.parse
+
+    path = urllib.parse.urlparse(exec_url).path
+    basename = os.path.basename(path)
+
+    filename = f"/tmp/simple-exec{'.'+basename if basename else ''}"
+
+    print(f"{log_prefix}downloading exec URL {repr(exec_url)} to {filename}")
+    urllib.request.urlretrieve(exec_url, filename)
+
+    os.chmod(filename, 0o755)
+
+    env = os.environ.copy()
+    env["SERVER"] = "1" if server else "0"
+    env["ADDR"] = s_addr
+    env["PORT"] = str(port)
+    env["DURATION"] = str(duration)
+    env["ORIG_ARGS_N"] = str(len(sys.argv))
+    for idx, a in enumerate(sys.argv):
+        env[f"ORIG_ARGS_{idx}"] = sys.argv[idx]
+
+    os.execve(filename, [filename] + exec_args, env)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Simple TCP echo server/client")
     parser.add_argument(
@@ -276,12 +313,55 @@ def parse_args() -> argparse.Namespace:
         help=f"For the server, how many clients are accepted (server can only handle one client at a time) (default: {DEFAULT_NUM_CLIENTS})",
         default=DEFAULT_NUM_CLIENTS,  # noqa: E225
     )
+    parser.add_argument(
+        "--exec",
+        default=None,
+        help='A HTTP URL to a script. If set, this script is downloaded and executed (set a shebang!). Environment variables SERVER, ADDR, PORT, DURATION are set and "--exec-args" options are passed. This allows to easily hack the code that runs by injecting a script from the internet.',
+    )
+
+    class AppendExecArgs(argparse.Action):
+        def __call__(
+            self,
+            parser: argparse.ArgumentParser,
+            namespace: argparse.Namespace,
+            values: Any,
+            option_string: Optional[str] = None,
+        ) -> None:
+            if option_string == "--exec-args":
+                namespace.exec_args.extend(shlex.split(values))
+            else:
+                namespace.exec_args.append(values)
+
+    parser.add_argument(
+        "--exec-args",
+        action=AppendExecArgs,
+        dest="exec_args",
+        default=[],
+        help='If "--exec" is set, specify the command line argument passed to the script. The parameter is parsed with shlex.split() (use shlex.quote() to ensure it is not split or use "--exec-arg" option). Can be specified multiple times and combined with "--exec-arg", in which case all entries are concatenated.',
+    )
+    parser.add_argument(
+        "-E",
+        "--exec-arg",
+        action=AppendExecArgs,
+        dest="exec_args",
+        help='If "--exec" is set, specify the command line argument passed to the script. Similar to "--exec-args", but this is a single command line argument used as-is. Can be specified multiple times and combined with "--exec-args", in which all case entries are concatenated.',
+    )
+
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    if args.server:
+    if args.exec is not None:
+        run_exec(
+            exec_url=args.exec,
+            exec_args=args.exec_args,
+            server=args.server,
+            s_addr=args.addr,
+            port=args.port,
+            duration=args.duration,
+        )
+    elif args.server:
         run_server(
             s_addr=args.addr,
             port=args.port,

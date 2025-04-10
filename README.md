@@ -143,3 +143,5 @@ Simply run the python application as so:
      your own variants of the files from "manifests" directory and they will be preferred.
 - `TFT_MANIFESTS_YAMLS` to specify the output directory for rendered manifests. This
      defaults to "manifests/yamls".
+- `TFT_KUBECONFIG`, `TFT_KUBECONFIG_INFRA` to overwrite the kubeconfigs from the configuration
+     file. See also the "--kubeconfig" and "--kubeconfig-infra" command line options.

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import argparse
+import shlex
 
 from pathlib import Path
+from typing import Optional
 
 from ktoolbox import common
 
 import print_results
+import tftbase
 
 from evaluator import Evaluator
 from testConfig import ConfigDescriptor
@@ -57,6 +60,18 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help='By default, the program only runs the tests and writes the results. It is not expected to fail unless a serious error happened. In that case, you usually want to run `print_results.py` command afterwards. Passing "--check" combines those two steps in one and the `tft.py` command succeeds only if all tests pass.',
     )
+    parser.add_argument(
+        "--kubeconfig",
+        type=str,
+        default=None,
+        help='The kubeconfig for the tenant cluster. If unspecified, defaults to "$TFT_KUBECONFIG" variable. If still unspecified, taken from the configuration file. If still unspecified, detect based on files in "/root/kubeconfig*".',
+    )
+    parser.add_argument(
+        "--kubeconfig-infra",
+        type=str,
+        default=None,
+        help='The kubeconfig for the infra cluster. If unspecified, defaults to "$TFT_KUBECONFIG_INFRA" variable. If still unspecified, taken from the configuration file. If still unspecified, detect based on files in "/root/kubeconfig*". Note that this option is tightly coupled with "--kubeconfig". This means, if we find a configuration from a certain source (environment, command line, config), then both values must come from the same source.',
+    )
 
     common.log_argparse_add_argument_verbosity(parser)
 
@@ -70,12 +85,57 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def option_get_kubeconfigs(
+    kubeconfig: Optional[str], kubeconfig_infra: Optional[str]
+) -> Optional[tuple[str, Optional[str]]]:
+    kubeconfigs: Optional[tuple[str, Optional[str]]] = None
+    source = "none"
+    kubeconfig_source = ""
+    kubeconfig_infra_source = ""
+    if kubeconfig is not None or kubeconfig_infra is not None:
+        source = "command-line"
+        kubeconfig_source = '"--kubeconfig"'
+        kubeconfig_infra_source = '"--kubeconfig-infra"'
+        if kubeconfig is None:
+            raise ValueError(
+                f"Setting {source} {kubeconfig_infra_source} requires also the {kubeconfig_source} from {source}"
+            )
+        kubeconfigs = (kubeconfig, kubeconfig_infra)
+    if kubeconfigs is None:
+        kubeconfig = tftbase.get_environ("TFT_KUBECONFIG")
+        kubeconfig_infra = tftbase.get_environ("TFT_KUBECONFIG_INFRA")
+        if kubeconfig is not None or kubeconfig_infra is not None:
+            source = "environment variable"
+            kubeconfig_source = '"$TFT_KUBECONFIG"'
+            kubeconfig_infra_source = '"$TFT_KUBECONFIG_INFRA"'
+            if kubeconfig is None:
+                raise ValueError(
+                    f"Setting {source} {kubeconfig_infra_source} requires also setting the {kubeconfig_source} {source}"
+                )
+            kubeconfigs = (kubeconfig, kubeconfig_infra)
+
+    if kubeconfigs is not None:
+        kubeconfig, kubeconfig_infra = kubeconfigs
+        tftbase.logger.info(
+            f"KUBECONFIG from {source} {kubeconfig_source}: {shlex.quote(common.unwrap(kubeconfig))}"
+        )
+        tftbase.logger.info(
+            f"KUBECONFIG_INFRA from {source} {kubeconfig_infra_source}: {shlex.quote(kubeconfig_infra) if kubeconfig_infra is not None else '<MISSING>'}"
+        )
+
+    return kubeconfigs
+
+
 def main() -> int:
     args = parse_args()
 
     tc = TestConfig(
         config_path=args.config,
         evaluator_config=args.evaluator_config,
+        kubeconfigs=option_get_kubeconfigs(
+            args.kubeconfig,
+            args.kubeconfig_infra,
+        ),
         output_base=args.output_base,
     )
     tc.system_check()

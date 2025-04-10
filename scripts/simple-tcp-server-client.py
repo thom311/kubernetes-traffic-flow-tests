@@ -366,7 +366,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    if args.exec is not None:
+    if args.exec:
         run_exec(
             exec_url=args.exec,
             exec_args=args.exec_args,

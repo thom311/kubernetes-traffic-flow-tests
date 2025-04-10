@@ -97,6 +97,7 @@ def run_server(
     bufsize: int = DEFAULT_BUFSIZE,
     duration: float = DEFAULT_DURATION,
     num_clients: int = DEFAULT_NUM_CLIENTS,
+    verbose: bool = False,
 ) -> None:
 
     start_time = global_start_time
@@ -169,6 +170,7 @@ def run_client(
     sleep: float = DEFAULT_SLEEP,
     bufsize: int = DEFAULT_BUFSIZE,
     duration: float = DEFAULT_DURATION,
+    verbose: bool = False,
 ) -> None:
 
     start_time = global_start_time
@@ -217,8 +219,15 @@ def run_client(
                 sys.exit(1)
             assert r
             rcv_data += r
+            if verbose:
+                print(
+                    f"client: received {len(r)} bytes ({len(rcv_data)} of {len(snd_data)})"
+                )
 
         if rcv_data != snd_data:
+            if verbose:
+                print("client: was expecting    {repr(snd_data)}")
+                print("client: received instead {repr(rcv_data)}")
             print("client: unexpected response. Expect an echo of the data we sent")
             sys.exit(1)
 
@@ -322,6 +331,12 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_NUM_CLIENTS,  # noqa: E225
     )
     parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output",
+    )
+    parser.add_argument(
         "--exec",
         default=None,
         help='A HTTP URL to a script. If set, this script is downloaded and executed (set a shebang!). Environment variables SERVER, ADDR, PORT, DURATION are set and "--exec-args" options are passed. This allows to easily hack the code that runs by injecting a script from the internet.',
@@ -384,6 +399,7 @@ def main() -> None:
             bufsize=args.bufsize,
             duration=args.duration,
             num_clients=args.num_clients,
+            verbose=args.verbose,
         )
     else:
         run_client(
@@ -392,6 +408,7 @@ def main() -> None:
             sleep=args.sleep,
             bufsize=args.bufsize,
             duration=args.duration,
+            verbose=args.verbose,
         )
 
 

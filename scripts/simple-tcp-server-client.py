@@ -97,6 +97,7 @@ def run_server(
     bufsize: int = DEFAULT_BUFSIZE,
     duration: float = DEFAULT_DURATION,
     num_clients: int = DEFAULT_NUM_CLIENTS,
+    verbose: bool = False,
 ) -> None:
 
     start_time = global_start_time
@@ -169,6 +170,7 @@ def run_client(
     sleep: float = DEFAULT_SLEEP,
     bufsize: int = DEFAULT_BUFSIZE,
     duration: float = DEFAULT_DURATION,
+    verbose: bool = False,
 ) -> None:
 
     start_time = global_start_time
@@ -217,8 +219,15 @@ def run_client(
                 sys.exit(1)
             assert r
             rcv_data += r
+            if verbose:
+                print(
+                    f"client: received {len(r)} bytes ({len(rcv_data)} of {len(snd_data)})"
+                )
 
         if rcv_data != snd_data:
+            if verbose:
+                print("client: was expecting    {repr(snd_data)}")
+                print("client: received instead {repr(rcv_data)}")
             print("client: unexpected response. Expect an echo of the data we sent")
             sys.exit(1)
 
@@ -234,6 +243,7 @@ def run_client(
 def run_exec(
     exec_url: str,
     exec_args: list[str],
+    exec_insecure: bool,
     server: bool,
     s_addr: str,
     port: int,
@@ -248,6 +258,13 @@ def run_exec(
     basename = os.path.basename(path)
 
     filename = f"/tmp/simple-exec{'.'+basename if basename else ''}"
+
+    if exec_insecure:
+        import ssl
+
+        # Hack up ssl._create_default_https_context so that urlretrieve()
+        # ignores SSL errors.
+        ssl._create_default_https_context = ssl._create_unverified_context
 
     print(f"{log_prefix}downloading exec URL {repr(exec_url)} to {filename}")
     urllib.request.urlretrieve(exec_url, filename)
@@ -314,9 +331,21 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_NUM_CLIENTS,  # noqa: E225
     )
     parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output",
+    )
+    parser.add_argument(
         "--exec",
         default=None,
         help='A HTTP URL to a script. If set, this script is downloaded and executed (set a shebang!). Environment variables SERVER, ADDR, PORT, DURATION are set and "--exec-args" options are passed. This allows to easily hack the code that runs by injecting a script from the internet.',
+    )
+    parser.add_argument(
+        "-k",
+        "--exec-insecure",
+        action="store_true",
+        help='If set to true, ignore SSL errors for downloading "--exec" script',
     )
 
     class AppendExecArgs(argparse.Action):
@@ -352,10 +381,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    if args.exec is not None:
+    if args.exec:
         run_exec(
             exec_url=args.exec,
             exec_args=args.exec_args,
+            exec_insecure=args.exec_insecure,
             server=args.server,
             s_addr=args.addr,
             port=args.port,
@@ -369,6 +399,7 @@ def main() -> None:
             bufsize=args.bufsize,
             duration=args.duration,
             num_clients=args.num_clients,
+            verbose=args.verbose,
         )
     else:
         run_client(
@@ -377,6 +408,7 @@ def main() -> None:
             sleep=args.sleep,
             bufsize=args.bufsize,
             duration=args.duration,
+            verbose=args.verbose,
         )
 
 

@@ -32,7 +32,7 @@ from tftbase import TestCaseType
 from tftbase import TestType
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 T1 = TypeVar("T1")

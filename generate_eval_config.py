@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import logging
 import os
 import sys
 
@@ -19,7 +18,7 @@ from tftbase import Bitrate
 from tftbase import TftResults
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 def load_config(config: Optional[str]) -> Optional[Config]:

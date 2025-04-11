@@ -3,6 +3,7 @@ import task
 
 from pathlib import Path
 
+from ktoolbox import common
 from ktoolbox import host
 
 import testConfig
@@ -16,7 +17,7 @@ from tftbase import TftResult
 from tftbase import TftResults
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 class TrafficFlowTests:

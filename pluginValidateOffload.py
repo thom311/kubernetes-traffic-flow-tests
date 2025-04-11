@@ -1,4 +1,3 @@
-import logging
 import typing
 
 from typing import Optional
@@ -18,7 +17,7 @@ from tftbase import PodType
 from tftbase import TaskRole
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 VF_REP_TRAFFIC_THRESHOLD = 1000

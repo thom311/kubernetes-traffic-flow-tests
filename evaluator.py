@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import logging
 import pathlib
 import sys
 
@@ -18,7 +17,7 @@ from tftbase import TftResult
 from tftbase import TftResults
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 class Evaluator:

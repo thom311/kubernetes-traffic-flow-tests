@@ -1,11 +1,12 @@
 import json
-import logging
 import task
 
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 from typing import Optional
+
+from ktoolbox import common
 
 import tftbase
 
@@ -20,7 +21,7 @@ from tftbase import FlowTestOutput
 from tftbase import TestType
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 IPERF_EXE = "iperf3"

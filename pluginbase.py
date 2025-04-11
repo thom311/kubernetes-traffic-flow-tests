@@ -1,4 +1,3 @@
-import logging
 import threading
 import typing
 
@@ -11,7 +10,7 @@ from tftbase import PluginOutput
 from tftbase import TestMetadata
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 class Plugin(ABC):

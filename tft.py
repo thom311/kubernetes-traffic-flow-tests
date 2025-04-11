@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-c",
         "--check",
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         default=False,
         help='By default, the program only runs the tests and writes the results. It is not expected to fail unless a serious error happened. In that case, you usually want to run `print_results.py` command afterwards. Passing "--check" combines those two steps in one and the `tft.py` command succeeds only if all tests pass.',
     )

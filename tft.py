@@ -17,6 +17,9 @@ from testConfig import TestConfig
 from trafficFlowTests import TrafficFlowTests
 
 
+logger = common.ExtendedLogger("tft." + __name__)
+
+
 def parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(
@@ -116,10 +119,10 @@ def option_get_kubeconfigs(
 
     if kubeconfigs is not None:
         kubeconfig, kubeconfig_infra = kubeconfigs
-        tftbase.logger.info(
+        logger.info(
             f"KUBECONFIG from {source} {kubeconfig_source}: {shlex.quote(common.unwrap(kubeconfig))}"
         )
-        tftbase.logger.info(
+        logger.info(
             f"KUBECONFIG_INFRA from {source} {kubeconfig_infra_source}: {shlex.quote(kubeconfig_infra) if kubeconfig_infra is not None else '<MISSING>'}"
         )
 

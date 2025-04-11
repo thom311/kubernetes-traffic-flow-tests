@@ -2,6 +2,7 @@
 
 import argparse
 import shlex
+import time
 
 from pathlib import Path
 from typing import Optional
@@ -130,8 +131,11 @@ def option_get_kubeconfigs(
 
 
 def main() -> int:
+    time_start = time.monotonic()
+
     args = parse_args()
 
+    args_check = args.check
     tc = TestConfig(
         config_path=args.config,
         evaluator_config=args.evaluator_config,
@@ -153,17 +157,26 @@ def main() -> int:
         tft_results = tft.test_run(cfg_descr, evaluator)
         tft_results_lst.append(tft_results)
 
+    exit_code = 0
+
     def results_log_fcn(msg: str) -> None:
-        logger.info(msg)
+        if args_check:
+            logger.info(msg)
 
-    if args.check:
-        if not print_results.process_results_all(
-            tft_results_lst,
-            log=results_log_fcn,
-        ):
-            return print_results.EXIT_CODE_VALIDATION
+    if not print_results.process_results_all(
+        tft_results_lst,
+        log=results_log_fcn,
+    ):
+        exit_code = print_results.EXIT_CODE_VALIDATION
 
-    return 0
+    duration = time.monotonic() - time_start
+    logger.info(
+        f"test completed with {'success' if exit_code == 0 else 'failure'} (duration: {common.format_duration(duration)})"
+    )
+
+    if not args_check:
+        return 0
+    return exit_code
 
 
 if __name__ == "__main__":

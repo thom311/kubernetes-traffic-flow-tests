@@ -1,4 +1,3 @@
-import logging
 import re
 import time
 
@@ -19,7 +18,7 @@ from tftbase import PluginOutput
 from tftbase import TaskRole
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 class PluginMeasurePower(pluginbase.Plugin):

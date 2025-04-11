@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import typing
 
 from collections.abc import Iterable
 from typing import Optional
@@ -13,15 +14,19 @@ import tftbase
 EXIT_CODE_VALIDATION = 1
 
 
-def print_flow_test_output(test_output: Optional[tftbase.FlowTestOutput]) -> None:
+def print_flow_test_output(
+    test_output: Optional[tftbase.FlowTestOutput],
+    *,
+    log: typing.Callable[[str], None] = print,
+) -> None:
     if test_output is None:
-        print("Test ID: Unknown test")
+        log("Test ID: Unknown test")
         return
     if not test_output.eval_success:
         msg = f"failed: {test_output.eval_msg}"
     else:
         msg = "succeeded"
-    print(
+    log(
         f"Test ID: {test_output.tft_metadata.test_case_id.name}, "
         f"Test Type: {test_output.tft_metadata.test_type.name}, "
         f"Reverse: {common.bool_to_str(test_output.tft_metadata.reverse)}, "
@@ -31,57 +36,77 @@ def print_flow_test_output(test_output: Optional[tftbase.FlowTestOutput]) -> Non
     )
 
 
-def print_plugin_output(plugin_output: tftbase.PluginOutput) -> None:
+def print_plugin_output(
+    plugin_output: tftbase.PluginOutput,
+    *,
+    log: typing.Callable[[str], None] = print,
+) -> None:
     msg = f"failed: {plugin_output.eval_msg}"
     if not plugin_output.eval_success:
         msg = f"failed: {plugin_output.eval_msg}"
     else:
         msg = "succeeded"
-    print("     " f"plugin {plugin_output.plugin_metadata.plugin_name}, " f"{msg}")
+    log("     " f"plugin {plugin_output.plugin_metadata.plugin_name}, " f"{msg}")
 
 
-def print_tft_result(tft_result: tftbase.TftResult) -> None:
-    print_flow_test_output(tft_result.flow_test)
+def print_tft_result(
+    tft_result: tftbase.TftResult,
+    *,
+    log: typing.Callable[[str], None] = print,
+) -> None:
+    print_flow_test_output(tft_result.flow_test, log=log)
     for plugin_output in tft_result.plugins:
-        print_plugin_output(plugin_output)
+        print_plugin_output(plugin_output, log=log)
 
 
-def print_tft_results(tft_results: tftbase.TftResults) -> None:
+def print_tft_results(
+    tft_results: tftbase.TftResults,
+    *,
+    log: typing.Callable[[str], None] = print,
+) -> None:
     for tft_result in tft_results:
-        print_tft_result(tft_result)
+        print_tft_result(tft_result, log=log)
 
 
-def process_results(tft_results: tftbase.TftResults) -> bool:
+def process_results(
+    tft_results: tftbase.TftResults,
+    *,
+    log: typing.Callable[[str], None] = print,
+) -> bool:
 
     group_success, group_fail = tft_results.group_by_success()
 
-    print(
+    log(
         f"There are {len(group_success)} passing flows{tft_results.log_detail}.{' Details:' if group_success else ''}"
     )
-    print_tft_results(group_success)
+    print_tft_results(group_success, log=log)
 
-    print(
+    log(
         f"There are {len(group_fail)} failing flows{tft_results.log_detail}.{' Details:' if group_fail else ''}"
     )
-    print_tft_results(group_fail)
+    print_tft_results(group_fail, log=log)
 
-    print()
+    log("")
     return not group_fail
 
 
-def process_results_all(tft_results_lst: Iterable[tftbase.TftResults]) -> bool:
+def process_results_all(
+    tft_results_lst: Iterable[tftbase.TftResults],
+    *,
+    log: typing.Callable[[str], None] = print,
+) -> bool:
     failed_files: list[str] = []
 
     for tft_results in common.iter_eval_now(tft_results_lst):
-        if not process_results(tft_results):
+        if not process_results(tft_results, log=log):
             failed_files.append(common.unwrap(tft_results.filename))
 
-    print()
+    log("")
     if failed_files:
-        print(f"Failures detected in {repr(failed_files)}")
+        log(f"Failures detected in {repr(failed_files)}")
         return False
 
-    print("No failures detected in results")
+    log("No failures detected in results")
     return True
 
 

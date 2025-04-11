@@ -1,4 +1,3 @@
-import logging
 import threading
 import typing
 
@@ -6,10 +5,12 @@ from abc import ABC
 from abc import abstractmethod
 from dataclasses import dataclass
 
+from ktoolbox import common
+
 from tftbase import TestType
 
 
-logger = logging.getLogger("tft." + __name__)
+logger = common.ExtendedLogger("tft." + __name__)
 
 _handler_registry_lock = threading.Lock()
 

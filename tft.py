@@ -2,6 +2,7 @@
 
 import argparse
 import shlex
+import time
 
 from pathlib import Path
 from typing import Optional
@@ -15,6 +16,9 @@ from evaluator import Evaluator
 from testConfig import ConfigDescriptor
 from testConfig import TestConfig
 from trafficFlowTests import TrafficFlowTests
+
+
+logger = common.ExtendedLogger("tft." + __name__)
 
 
 def parse_args() -> argparse.Namespace:
@@ -116,10 +120,10 @@ def option_get_kubeconfigs(
 
     if kubeconfigs is not None:
         kubeconfig, kubeconfig_infra = kubeconfigs
-        tftbase.logger.info(
+        logger.info(
             f"KUBECONFIG from {source} {kubeconfig_source}: {shlex.quote(common.unwrap(kubeconfig))}"
         )
-        tftbase.logger.info(
+        logger.info(
             f"KUBECONFIG_INFRA from {source} {kubeconfig_infra_source}: {shlex.quote(kubeconfig_infra) if kubeconfig_infra is not None else '<MISSING>'}"
         )
 
@@ -127,8 +131,11 @@ def option_get_kubeconfigs(
 
 
 def main() -> int:
+    time_start = time.monotonic()
+
     args = parse_args()
 
+    args_check = args.check
     tc = TestConfig(
         config_path=args.config,
         evaluator_config=args.evaluator_config,
@@ -150,11 +157,26 @@ def main() -> int:
         tft_results = tft.test_run(cfg_descr, evaluator)
         tft_results_lst.append(tft_results)
 
-    if args.check:
-        if not print_results.process_results_all(tft_results_lst):
-            return print_results.EXIT_CODE_VALIDATION
+    exit_code = 0
 
-    return 0
+    def results_log_fcn(msg: str) -> None:
+        if args_check:
+            logger.info(msg)
+
+    if not print_results.process_results_all(
+        tft_results_lst,
+        log=results_log_fcn,
+    ):
+        exit_code = print_results.EXIT_CODE_VALIDATION
+
+    duration = time.monotonic() - time_start
+    logger.info(
+        f"test completed with {'success' if exit_code == 0 else 'failure'} (duration: {common.format_duration(duration)})"
+    )
+
+    if not args_check:
+        return 0
+    return exit_code
 
 
 if __name__ == "__main__":

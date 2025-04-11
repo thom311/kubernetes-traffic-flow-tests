@@ -153,8 +153,14 @@ def main() -> int:
         tft_results = tft.test_run(cfg_descr, evaluator)
         tft_results_lst.append(tft_results)
 
+    def results_log_fcn(msg: str) -> None:
+        logger.info(msg)
+
     if args.check:
-        if not print_results.process_results_all(tft_results_lst):
+        if not print_results.process_results_all(
+            tft_results_lst,
+            log=results_log_fcn,
+        ):
             return print_results.EXIT_CODE_VALIDATION
 
     return 0

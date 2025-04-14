@@ -3,9 +3,10 @@
 import argparse
 import os
 import random
-import socket
-import sys
 import shlex
+import socket
+import string
+import sys
 import time
 
 from collections.abc import Iterator
@@ -170,6 +171,13 @@ def run_server(
         conn.close()
 
 
+printable = (string.ascii_letters + string.digits).encode("ascii")
+
+
+def _random_ascii(n: int) -> bytes:
+    return bytes(random.choice(printable) for _ in range(n))
+
+
 def run_client(
     *,
     s_addr: str = DEFAULT_ADDR,
@@ -178,6 +186,7 @@ def run_client(
     bufsize: int = DEFAULT_BUFSIZE,
     duration: float = DEFAULT_DURATION,
     verbose: bool = False,
+    echo_ascii: bool = False,
 ) -> None:
 
     start_time = global_start_time
@@ -210,7 +219,10 @@ def run_client(
             )
 
         i_bufsize = random.randint(1, bufsize)
-        snd_data = os.urandom(i_bufsize)
+        if echo_ascii:
+            snd_data = _random_ascii(i_bufsize)
+        else:
+            snd_data = os.urandom(i_bufsize)
         if verbose:
             _print(f"client: echo random chunk of {i_bufsize} bytes")
         with socket_timeout("client", s, start_time, duration, done_msg=done_msg):
@@ -353,6 +365,12 @@ def parse_args() -> argparse.Namespace:
         help="Enable verbose output",
     )
     parser.add_argument(
+        "--echo-ascii",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="For the echo random data, only generate printable ASCII characters",
+    )
+    parser.add_argument(
         "--exec",
         default=None,
         help='A HTTP URL to a script. If set, this script is downloaded and executed (set a shebang!). Environment variables SERVER, ADDR, PORT, DURATION are set and "--exec-args" options are passed. This allows to easily hack the code that runs by injecting a script from the internet.',
@@ -425,6 +443,7 @@ def main() -> None:
             bufsize=args.bufsize,
             duration=args.duration,
             verbose=args.verbose,
+            echo_ascii=args.echo_ascii,
         )
 
 

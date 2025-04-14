@@ -10,6 +10,7 @@ import time
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Optional
@@ -23,6 +24,12 @@ DEFAULT_PORT = 5201
 DEFAULT_SLEEP = 0.001
 
 global_start_time = time.monotonic()
+
+
+def _print(msg: str) -> None:
+    now = datetime.now()
+    timestamp = now.strftime("%H:%M:%S.") + f"{now.microsecond // 100:04d}"
+    print(f"[{timestamp}] {msg}")
 
 
 def create_socket() -> socket.socket:
@@ -43,7 +50,7 @@ def socket_timeout(
     else:
         t = (start_time + duration) - time.monotonic()
         if t <= 0.0:
-            print(f"{log_name}: duration expired. Quit")
+            _print(f"{log_name}: duration expired. Quit")
             sys.exit(0)
     s.settimeout(t)
 
@@ -52,7 +59,7 @@ def socket_timeout(
     except socket.timeout:
         if done_msg is not None:
             done_msg()
-        print(f"{log_name}: duration expired. Quit")
+        _print(f"{log_name}: duration expired. Quit")
         sys.exit(0)
 
 
@@ -85,7 +92,7 @@ def sleep_timeout(
         done_msg()
     if exit_code is None:
         exit_code = 0
-    print(f"{log_name}: duration expired. Quit")
+    _print(f"{log_name}: duration expired. Quit")
     sys.exit(exit_code)
 
 
@@ -104,7 +111,7 @@ def run_server(
 
     s = create_socket()
 
-    print(f"server: listen on {s_addr}:{port}")
+    _print(f"server: listen on {s_addr}:{port}")
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((s_addr, port))
     s.listen(1)
@@ -113,12 +120,12 @@ def run_server(
 
     while 1:
         if num_clients > 0 and client_count >= num_clients:
-            print(f"server: number of clients {num_clients} reached. Quit")
+            _print(f"server: number of clients {num_clients} reached. Quit")
             sys.exit(0)
         with socket_timeout("server", s, start_time, duration):
             conn, addr = s.accept()
         client_count += 1
-        print(
+        _print(
             f"server: new connection #{client_count} on port {port} from addr {addr}."
         )
         msg_count = 0
@@ -127,7 +134,7 @@ def run_server(
         while 1:
 
             def done_msg() -> None:
-                print(
+                _print(
                     f"server: {msg_count} chunks received and returned ({rcv_len} bytes) in total"
                 )
 
@@ -140,7 +147,7 @@ def run_server(
                     data = b""
             if not data:
                 done_msg()
-                print(f"server: connection {addr} closed")
+                _print(f"server: connection {addr} closed")
                 break
             msg_count += 1
             rcv_len += len(data)
@@ -151,11 +158,11 @@ def run_server(
                     conn.sendall(data)
                 except ConnectionResetError:
                     done_msg()
-                    print(f"server: connection {addr} closed")
+                    _print(f"server: connection {addr} closed")
                     break
             now_time = time.monotonic()
             if now_time - last_time >= 1.0:
-                print(
+                _print(
                     f"server: {msg_count} chunks received and returned ({rcv_len} bytes)"
                 )
                 last_time = now_time
@@ -175,7 +182,7 @@ def run_client(
 
     start_time = global_start_time
 
-    print(f"client: connecting to {s_addr}:{port}")
+    _print(f"client: connecting to {s_addr}:{port}")
     s = create_socket()
 
     first_attempt = True
@@ -187,25 +194,25 @@ def run_client(
         except (ConnectionRefusedError, ConnectionAbortedError):
             if first_attempt:
                 first_attempt = False
-                print("client: connection refused. Retry")
+                _print("client: connection refused. Retry")
             sleep_timeout("client", start_time, min(duration, 60.0), 0.5, exit_code=1)
         else:
             connected = True
-    print(f"client: connected to {s_addr}:{port}")
+    _print(f"client: connected to {s_addr}:{port}")
 
     msg_count = 0
     rcv_len = 0
     while 1:
 
         def done_msg() -> None:
-            print(
+            _print(
                 f"client: {msg_count} chunks send and received ({rcv_len} bytes) in total"
             )
 
         i_bufsize = random.randint(1, bufsize)
         snd_data = os.urandom(i_bufsize)
         if verbose:
-            print(f"client: echo random chunk of {i_bufsize} bytes")
+            _print(f"client: echo random chunk of {i_bufsize} bytes")
         with socket_timeout("client", s, start_time, duration, done_msg=done_msg):
             s.sendall(snd_data)
         msg_count += 1
@@ -222,11 +229,11 @@ def run_client(
                 try:
                     r = s.recv(bufsize)
                 except socket.timeout:
-                    print(
+                    _print(
                         f"client: unexpected response. Timeout after {timeout_sec} seconds to receive a response. Even after waiting additional 20 seconds no response was received"
                     )
                 else:
-                    print(
+                    _print(
                         f"client: unexpected response. Timeout after {timeout_sec} seconds to receive a response. Aftware waiting some more, {len(r)} bytes were received"
                     )
                 sys.exit(1)
@@ -235,15 +242,15 @@ def run_client(
 
         if rcv_data != snd_data:
             if verbose:
-                print("client: was expecting    {repr(snd_data)}")
-                print("client: received instead {repr(rcv_data)}")
-            print("client: unexpected response. Expect an echo of the data we sent")
+                _print("client: was expecting    {repr(snd_data)}")
+                _print("client: received instead {repr(rcv_data)}")
+            _print("client: unexpected response. Expect an echo of the data we sent")
             sys.exit(1)
 
         rcv_len += len(rcv_data)
 
         if msg_count % 10000 == 0:
-            print(
+            _print(
                 f"client: {msg_count} chunks send and received ({rcv_len} bytes) for {s.getsockname()}->{s_addr}:{port}"
             )
         sleep_timeout("client", start_time, duration, sleep, done_msg=done_msg)
@@ -275,7 +282,7 @@ def run_exec(
         # ignores SSL errors.
         ssl._create_default_https_context = ssl._create_unverified_context
 
-    print(f"{log_prefix}downloading exec URL {repr(exec_url)} to {filename}")
+    _print(f"{log_prefix}downloading exec URL {repr(exec_url)} to {filename}")
     urllib.request.urlretrieve(exec_url, filename)
 
     os.chmod(filename, 0o755)

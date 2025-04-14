@@ -204,6 +204,8 @@ def run_client(
 
         i_bufsize = random.randint(1, bufsize)
         snd_data = os.urandom(i_bufsize)
+        if verbose:
+            print(f"client: echo random chunk of {i_bufsize} bytes")
         with socket_timeout("client", s, start_time, duration, done_msg=done_msg):
             s.sendall(snd_data)
         msg_count += 1
@@ -211,18 +213,25 @@ def run_client(
         # We first read all the data we sent back.
         rcv_data = b""
         while len(rcv_data) < len(snd_data):
-            s.settimeout(0.5)
+            timeout_sec = 1
+            s.settimeout(timeout_sec)
             try:
                 r = s.recv(bufsize)
             except socket.timeout:
-                print("client: unexpected response. Server did not echo expected data")
+                s.settimeout(20)
+                try:
+                    r = s.recv(bufsize)
+                except socket.timeout:
+                    print(
+                        f"client: unexpected response. Timeout after {timeout_sec} seconds to receive a response. Even after waiting additional 20 seconds no response was received"
+                    )
+                else:
+                    print(
+                        f"client: unexpected response. Timeout after {timeout_sec} seconds to receive a response. Aftware waiting some more, {len(r)} bytes were received"
+                    )
                 sys.exit(1)
             assert r
             rcv_data += r
-            if verbose:
-                print(
-                    f"client: received {len(r)} bytes ({len(rcv_data)} of {len(snd_data)})"
-                )
 
         if rcv_data != snd_data:
             if verbose:

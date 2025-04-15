@@ -87,7 +87,7 @@ class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
         return {
             **super().serialize(),
             "sriov": self.sriov,
-            "default-network": self.default_network,
+            "default_network": self.default_network,
             **d,
         }
 
@@ -106,9 +106,14 @@ class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
             )
 
             default_network = common.structparse_pop_str(
-                varg.for_key("default-network"),
-                default="default/default",
+                varg.for_key("default_network"),
+                default=None,
             )
+            if default_network is None:
+                default_network = common.structparse_pop_str(
+                    varg.for_key("default-network"),
+                    default="default/default",
+                )
 
             privileged_pod = common.structparse_pop_bool(
                 varg.for_key("privileged_pod"),

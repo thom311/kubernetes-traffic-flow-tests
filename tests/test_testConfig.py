@@ -165,6 +165,7 @@ tft:
          - name: c1
            args: "foo '-x x'"
            privileged_pod: False
+           default-network: default--n
        server:
          - name: s1
            args:
@@ -204,6 +205,7 @@ kubeconfig_infra: /path/to/kubeconfig_infra
     assert tc.config.tft[0].connections[1].test_type == TestType.SIMPLE
     assert tc.config.tft[0].connections[1].client[0].privileged_pod is False
     assert tc.config.tft[0].connections[1].client[0].args == ("foo", "-x x")
+    assert tc.config.tft[0].connections[1].client[0].default_network == "default--n"
     assert tc.config.tft[0].connections[1].server[0].args == ("hi x",)
     assert tc.config.tft[0].connections[1].server[0].privileged_pod is None
     assert tc.config.tft[0].get_output_file() == pathlib.Path("/tmp/result-000.json")

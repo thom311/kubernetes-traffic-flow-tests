@@ -69,6 +69,7 @@ class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
     sriov: bool
     pod_type: PodType
     default_network: str
+    privileged_pod: Optional[bool]
 
     # Extra arguments for the client/server. Their actual meaning depend on the
     # "type". These might be command line arguments passed to the tool.
@@ -80,6 +81,7 @@ class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
 
     def serialize(self) -> dict[str, Any]:
         d: dict[str, Any] = {}
+        common.dict_add_optional(d, "privileged_pod", self.privileged_pod)
         if self.args is not None:
             d["args"] = list(self.args)
         return {
@@ -106,6 +108,11 @@ class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
             default_network = common.structparse_pop_str(
                 varg.for_key("default-network"),
                 default="default/default",
+            )
+
+            privileged_pod = common.structparse_pop_bool(
+                varg.for_key("privileged_pod"),
+                default=None,
             )
 
             def _construct_args(pctx2: StructParseParseContext) -> tuple[str, ...]:
@@ -149,6 +156,7 @@ class ConfNodeBase(_ConfBaseConnectionItem, abc.ABC):
             pod_type=PodType.SRIOV if sriov else PodType.NORMAL,
             sriov=sriov,
             default_network=default_network,
+            privileged_pod=privileged_pod,
             args=args,
             **type_specific_kwargs,
         )
@@ -369,6 +377,7 @@ class ConfTest(StructParseBaseNamed):
     namespace: str
     test_cases: tuple[TestCaseType, ...]
     duration: int
+    privileged_pod: bool
     connections: tuple[ConfConnection, ...]
     logs: pathlib.Path
 
@@ -386,6 +395,7 @@ class ConfTest(StructParseBaseNamed):
             "namespace": self.namespace,
             "test_cases": [t.name for t in self.test_cases],
             "duration": self.duration,
+            "privileged_pod": self.privileged_pod,
             "connections": [c.serialize() for c in self.connections],
             "logs": str(self.logs),
         }
@@ -435,6 +445,11 @@ class ConfTest(StructParseBaseNamed):
             if duration == 0:
                 duration = 3600
 
+            privileged_pod = common.structparse_pop_bool(
+                varg.for_key("privileged_pod"),
+                default=False,
+            )
+
             connections = common.structparse_pop_objlist(
                 varg.for_key("connections"),
                 construct=lambda pctx2: ConfConnection.parse(
@@ -457,6 +472,7 @@ class ConfTest(StructParseBaseNamed):
             namespace=namespace,
             test_cases=tuple(test_cases),
             duration=duration,
+            privileged_pod=privileged_pod,
             connections=connections,
             logs=pathlib.Path(logs),
         )

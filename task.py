@@ -336,6 +336,10 @@ class Task(ABC):
             "node_name": self.node_name,
             "pod_name": self.pod_name,
             "port": self._get_template_args_port(),
+            "privileged_pod": common.bool_to_str(
+                self._get_template_args_privileged_pod(),
+                format="true",
+            ),
             "secondary_network_nad": self.ts.connection.effective_secondary_network_nad,
             "use_secondary_network": (
                 "1" if self.ts.connection.secondary_network_nad else ""
@@ -351,6 +355,18 @@ class Task(ABC):
             ),
             "default_network": self.node.default_network,
         }
+
+    def _get_template_args_privileged_pod(self) -> bool:
+        v = self.node.privileged_pod
+        if v is not None:
+            # The per-node setting has precedence.
+            return v
+        v = tftbase.get_tft_privileged_pod()
+        if v is not None:
+            # Then the setting from the environment variable.
+            return v
+        # Finaly, the test-wide setting fro the configruration file.
+        return self.ts.cfg_descr.get_tft().privileged_pod
 
     def _get_template_args_port(self) -> str:
         return ""

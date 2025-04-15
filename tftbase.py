@@ -23,6 +23,8 @@ logger = common.ExtendedLogger("tft." + __name__)
 ENV_TFT_TEST_IMAGE = "TFT_TEST_IMAGE"
 ENV_TFT_IMAGE_PULL_POLICY = "TFT_IMAGE_PULL_POLICY"
 
+ENV_TFT_PRIVILEGED_POD = "TFT_PRIVILEGED_POD"
+
 ENV_TFT_TEST_IMAGE_DEFAULT = (
     "ghcr.io/ovn-kubernetes/kubernetes-traffic-flow-tests:latest"
 )
@@ -67,6 +69,16 @@ def get_tft_image_pull_policy() -> str:
             s = "IfNotPresent"
     logger.info(f"env: {ENV_TFT_IMAGE_PULL_POLICY}={shlex.quote(s)}")
     return s
+
+
+@functools.cache
+def get_tft_privileged_pod() -> Optional[bool]:
+    d = get_environ(ENV_TFT_PRIVILEGED_POD)
+    value = common.str_to_bool(d, on_default=None)
+    logger.info(
+        f"env: {ENV_TFT_PRIVILEGED_POD}={common.bool_to_str(value) if value is not None else ''}"
+    )
+    return value
 
 
 @functools.cache

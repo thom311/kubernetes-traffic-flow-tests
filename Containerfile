@@ -35,6 +35,8 @@ RUN dnf install \
         wget \
         -y
 
+RUN curl -L https://github.com/mikefarah/yq/releases/latest/download/yq_linux_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') -o /bin/yq && \
+    chmod +x /bin/yq
 
 RUN python3.11 -m venv /opt/pyvenv3.11
 RUN /opt/pyvenv3.11/bin/python -m pip install --upgrade pip

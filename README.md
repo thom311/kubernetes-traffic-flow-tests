@@ -54,11 +54,11 @@ tft:
           - name: "(8)"
             persistent: "(9)"
             sriov: "(10)"
-            default-network: "(11)"
+            default_network: "(11)"
         client:
           - name: "(12)"
             sriov: "(13)"
-            default-network: "(14)"
+            default_network: "(14)"
         plugins:
           - name: (15)
           - name: (15)
@@ -106,10 +106,10 @@ kubeconfig_infra: (18)
 8. "name" - The node name of the server.
 9. "persistent" - Whether to have the server pod persist after the test. Takes in "true/false"
 10. "sriov" - Whether SRIOV should be used for the server pod. Takes in "true/false"
-11. "default-network" - (Optional) The name of the default network that the sriov pod would use.
+11. "default_network" - (Optional) The name of the default network that the sriov pod would use.
 12. "name" - The node name of the client.
 13. "sriov" - Whether SRIOV should be used for the client pod. Takes in "true/false"
-14. "default-network" - (Optional) The name of the default network that the sriov pod would use.
+14. "default_network" - (Optional) The name of the default network that the sriov pod would use.
 15. "name" - (Optional) list of plugin names
     | Name             | Description          |
     | ---------------- | -------------------- |
@@ -138,6 +138,8 @@ Simply run the python application as so:
 - `TFT_IMAGE_PULL_POLICY` the image pull policy. One of `IfNotPresent`, `Always`, `Never`.
      Defaults to `IfNotPresent`m unless `$TFT_TEST_IMAGE` is set (in which case it defaults
      to `Always`).
+- `TFT_PRIVILEGED_POD` sets whether test pods are privileged. This overwrites the settings
+     from the configuration YAML.
 - `TFT_MANIFESTS_OVERRIDES` to specify an overrides directory for manifests. If not set, the
      default is "manifests/overrides". If set to empty, no overrides are used. You can place
      your own variants of the files from "manifests" directory and they will be preferred.

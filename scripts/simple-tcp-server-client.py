@@ -3,13 +3,15 @@
 import argparse
 import os
 import random
-import socket
-import sys
 import shlex
+import socket
+import string
+import sys
 import time
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import datetime
 from typing import Any
 from typing import Callable
 from typing import Optional
@@ -23,6 +25,12 @@ DEFAULT_PORT = 5201
 DEFAULT_SLEEP = 0.001
 
 global_start_time = time.monotonic()
+
+
+def _print(msg: str) -> None:
+    now = datetime.now()
+    timestamp = now.strftime("%H:%M:%S.") + f"{now.microsecond // 100:04d}"
+    print(f"[{timestamp}] {msg}")
 
 
 def create_socket() -> socket.socket:
@@ -43,7 +51,7 @@ def socket_timeout(
     else:
         t = (start_time + duration) - time.monotonic()
         if t <= 0.0:
-            print(f"{log_name}: duration expired. Quit")
+            _print(f"{log_name}: duration expired. Quit")
             sys.exit(0)
     s.settimeout(t)
 
@@ -52,7 +60,7 @@ def socket_timeout(
     except socket.timeout:
         if done_msg is not None:
             done_msg()
-        print(f"{log_name}: duration expired. Quit")
+        _print(f"{log_name}: duration expired. Quit")
         sys.exit(0)
 
 
@@ -85,7 +93,7 @@ def sleep_timeout(
         done_msg()
     if exit_code is None:
         exit_code = 0
-    print(f"{log_name}: duration expired. Quit")
+    _print(f"{log_name}: duration expired. Quit")
     sys.exit(exit_code)
 
 
@@ -104,7 +112,7 @@ def run_server(
 
     s = create_socket()
 
-    print(f"server: listen on {s_addr}:{port}")
+    _print(f"server: listen on {s_addr}:{port}")
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     s.bind((s_addr, port))
     s.listen(1)
@@ -113,12 +121,12 @@ def run_server(
 
     while 1:
         if num_clients > 0 and client_count >= num_clients:
-            print(f"server: number of clients {num_clients} reached. Quit")
+            _print(f"server: number of clients {num_clients} reached. Quit")
             sys.exit(0)
         with socket_timeout("server", s, start_time, duration):
             conn, addr = s.accept()
         client_count += 1
-        print(
+        _print(
             f"server: new connection #{client_count} on port {port} from addr {addr}."
         )
         msg_count = 0
@@ -127,7 +135,7 @@ def run_server(
         while 1:
 
             def done_msg() -> None:
-                print(
+                _print(
                     f"server: {msg_count} chunks received and returned ({rcv_len} bytes) in total"
                 )
 
@@ -140,7 +148,7 @@ def run_server(
                     data = b""
             if not data:
                 done_msg()
-                print(f"server: connection {addr} closed")
+                _print(f"server: connection {addr} closed")
                 break
             msg_count += 1
             rcv_len += len(data)
@@ -151,16 +159,23 @@ def run_server(
                     conn.sendall(data)
                 except ConnectionResetError:
                     done_msg()
-                    print(f"server: connection {addr} closed")
+                    _print(f"server: connection {addr} closed")
                     break
             now_time = time.monotonic()
             if now_time - last_time >= 1.0:
-                print(
+                _print(
                     f"server: {msg_count} chunks received and returned ({rcv_len} bytes)"
                 )
                 last_time = now_time
             sleep_timeout("server", start_time, duration, sleep, done_msg=done_msg)
         conn.close()
+
+
+printable = (string.ascii_letters + string.digits).encode("ascii")
+
+
+def _random_ascii(n: int) -> bytes:
+    return bytes(random.choice(printable) for _ in range(n))
 
 
 def run_client(
@@ -171,11 +186,12 @@ def run_client(
     bufsize: int = DEFAULT_BUFSIZE,
     duration: float = DEFAULT_DURATION,
     verbose: bool = False,
+    echo_ascii: bool = False,
 ) -> None:
 
     start_time = global_start_time
 
-    print(f"client: connecting to {s_addr}:{port}")
+    _print(f"client: connecting to {s_addr}:{port}")
     s = create_socket()
 
     first_attempt = True
@@ -187,23 +203,28 @@ def run_client(
         except (ConnectionRefusedError, ConnectionAbortedError):
             if first_attempt:
                 first_attempt = False
-                print("client: connection refused. Retry")
+                _print("client: connection refused. Retry")
             sleep_timeout("client", start_time, min(duration, 60.0), 0.5, exit_code=1)
         else:
             connected = True
-    print(f"client: connected to {s_addr}:{port}")
+    _print(f"client: connected to {s_addr}:{port}")
 
     msg_count = 0
     rcv_len = 0
     while 1:
 
         def done_msg() -> None:
-            print(
+            _print(
                 f"client: {msg_count} chunks send and received ({rcv_len} bytes) in total"
             )
 
         i_bufsize = random.randint(1, bufsize)
-        snd_data = os.urandom(i_bufsize)
+        if echo_ascii:
+            snd_data = _random_ascii(i_bufsize)
+        else:
+            snd_data = os.urandom(i_bufsize)
+        if verbose:
+            _print(f"client: echo random chunk of {i_bufsize} bytes")
         with socket_timeout("client", s, start_time, duration, done_msg=done_msg):
             s.sendall(snd_data)
         msg_count += 1
@@ -211,30 +232,37 @@ def run_client(
         # We first read all the data we sent back.
         rcv_data = b""
         while len(rcv_data) < len(snd_data):
-            s.settimeout(0.5)
+            timeout_sec = 1
+            s.settimeout(timeout_sec)
             try:
                 r = s.recv(bufsize)
             except socket.timeout:
-                print("client: unexpected response. Server did not echo expected data")
+                s.settimeout(20)
+                try:
+                    r = s.recv(bufsize)
+                except socket.timeout:
+                    _print(
+                        f"client: unexpected response. Timeout after {timeout_sec} seconds to receive a response. Even after waiting additional 20 seconds no response was received"
+                    )
+                else:
+                    _print(
+                        f"client: unexpected response. Timeout after {timeout_sec} seconds to receive a response. Aftware waiting some more, {len(r)} bytes were received"
+                    )
                 sys.exit(1)
             assert r
             rcv_data += r
-            if verbose:
-                print(
-                    f"client: received {len(r)} bytes ({len(rcv_data)} of {len(snd_data)})"
-                )
 
         if rcv_data != snd_data:
             if verbose:
-                print("client: was expecting    {repr(snd_data)}")
-                print("client: received instead {repr(rcv_data)}")
-            print("client: unexpected response. Expect an echo of the data we sent")
+                _print("client: was expecting    {repr(snd_data)}")
+                _print("client: received instead {repr(rcv_data)}")
+            _print("client: unexpected response. Expect an echo of the data we sent")
             sys.exit(1)
 
         rcv_len += len(rcv_data)
 
         if msg_count % 10000 == 0:
-            print(
+            _print(
                 f"client: {msg_count} chunks send and received ({rcv_len} bytes) for {s.getsockname()}->{s_addr}:{port}"
             )
         sleep_timeout("client", start_time, duration, sleep, done_msg=done_msg)
@@ -266,7 +294,7 @@ def run_exec(
         # ignores SSL errors.
         ssl._create_default_https_context = ssl._create_unverified_context
 
-    print(f"{log_prefix}downloading exec URL {repr(exec_url)} to {filename}")
+    _print(f"{log_prefix}downloading exec URL {repr(exec_url)} to {filename}")
     urllib.request.urlretrieve(exec_url, filename)
 
     os.chmod(filename, 0o755)
@@ -335,6 +363,12 @@ def parse_args() -> argparse.Namespace:
         "--verbose",
         action="store_true",
         help="Enable verbose output",
+    )
+    parser.add_argument(
+        "--echo-ascii",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="For the echo random data, only generate printable ASCII characters",
     )
     parser.add_argument(
         "--exec",
@@ -409,6 +443,7 @@ def main() -> None:
             bufsize=args.bufsize,
             duration=args.duration,
             verbose=args.verbose,
+            echo_ascii=args.echo_ascii,
         )
 
 

@@ -359,13 +359,13 @@ class Task(ABC):
     def _get_template_args_privileged_pod(self) -> bool:
         v = self.node.privileged_pod
         if v is not None:
-            # The per-node setting has precedence.
+            # First, the per-node setting has precedence.
             return v
         v = tftbase.get_tft_privileged_pod()
         if v is not None:
-            # Then the setting from the environment variable.
+            # Second, the setting from the environment variable is honored.
             return v
-        # Finaly, the test-wide setting fro the configruration file.
+        # Finally, take the test-wide setting from the configuration file.
         return self.ts.cfg_descr.get_tft().privileged_pod
 
     def _get_template_args_port(self) -> str:

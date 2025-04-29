@@ -147,3 +147,29 @@ Simply run the python application as so:
      defaults to "manifests/yamls".
 - `TFT_KUBECONFIG`, `TFT_KUBECONFIG_INFRA` to overwrite the kubeconfigs from the configuration
      file. See also the "--kubeconfig" and "--kubeconfig-infra" command line options.
+
+## File Transfer via magic-wormhole
+
+It is sometimes cumbersome to transfer files between machines. [magic-wormhole](https://github.com/magic-wormhole/magic-wormhole) helps
+with that. Unfortunately it is not packaged in RHEL/Fedora. You can install it with `pip install magic-wormhole` or
+```
+python3 -m venv /opt/magic-wormhole-venv && \
+( source /opt/magic-wormhole-venv/bin/activate && \
+  pip install --upgrade pip && \
+  pip install magic-wormhole ) && \
+ln -s /opt/magic-wormhole-venv/bin/wormhole /usr/bin/
+```
+
+wormhole is installed in the kubernetes-traffic-flow-tests container.
+From inside the container you can issue `wormhole send $FILE`. Or you can
+
+```
+podman run --rm -ti -v /:/host -v .:/pwd:Z -w /pwd ghcr.io/ovn-kubernetes/kubernetes-traffic-flow-tests:latest wormhole send $FILE
+```
+
+This will print a code, which you use on the receiving end via `wormhole receive $CODE`.
+Or
+
+```
+podman run --rm -ti -v .:/pwd:Z -w /pwd ghcr.io/ovn-kubernetes/kubernetes-traffic-flow-tests:latest wormhole receive $CODE
+```

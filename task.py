@@ -291,6 +291,9 @@ class Task(ABC):
     def node_name(self) -> str:
         return self.node.name
 
+    def node_name_sanitized(self) -> str:
+        return self.node_name.replace(".", "-")
+
     def get_namespace(self) -> str:
         return self.ts.cfg_descr.get_tft().namespace
 
@@ -753,7 +756,7 @@ class ServerTask(Task, ABC):
 
         connection_mode = ts.connection_mode
         pod_type = ts.server_pod_type
-        node_name = self.node_name
+        node_name_sanitized = self.node_name_sanitized()
         port = 5201 + self.index
 
         if connection_mode == ConnectionMode.EXTERNAL_IP:
@@ -766,27 +769,29 @@ class ServerTask(Task, ABC):
         ):
             in_file_template = tftbase.get_manifest("pod-secondary-network.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"pod-secondary-network-{node_name}-server.yaml"
+                f"pod-secondary-network-{node_name_sanitized}-server.yaml"
             )
-            pod_name = f"normal-pod-secondary-network-{node_name}-server-{port}"
+            pod_name = (
+                f"normal-pod-secondary-network-{node_name_sanitized}-server-{port}"
+            )
         elif pod_type == PodType.SRIOV:
             in_file_template = tftbase.get_manifest("sriov-pod.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"sriov-pod-{node_name}-server.yaml"
+                f"sriov-pod-{node_name_sanitized}-server.yaml"
             )
-            pod_name = f"sriov-pod-{node_name}-server-{port}"
+            pod_name = f"sriov-pod-{node_name_sanitized}-server-{port}"
         elif pod_type == PodType.NORMAL:
             in_file_template = tftbase.get_manifest("pod.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"pod-{node_name}-server.yaml"
+                f"pod-{node_name_sanitized}-server.yaml"
             )
-            pod_name = f"normal-pod-{node_name}-server-{port}"
+            pod_name = f"normal-pod-{node_name_sanitized}-server-{port}"
         elif pod_type == PodType.HOSTBACKED:
             in_file_template = tftbase.get_manifest("host-pod.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"host-pod-{node_name}-server.yaml"
+                f"host-pod-{node_name_sanitized}-server.yaml"
             )
-            pod_name = f"host-pod-{node_name}-server-{port}"
+            pod_name = f"host-pod-{node_name_sanitized}-server-{port}"
         else:
             raise ValueError("Invalid pod_type {pod_type}")
 
@@ -920,34 +925,36 @@ class ClientTask(Task, ABC):
         )
 
         pod_type = ts.client_pod_type
-        node_name = self.node_name
+        node_name_sanitized = self.node_name_sanitized()
         port = server.port
         connection_mode = ts.connection_mode
 
         if connection_mode in (ConnectionMode.MULTI_HOME, ConnectionMode.MULTI_NETWORK):
             in_file_template = tftbase.get_manifest("pod-secondary-network.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"pod-secondary-network-{node_name}-client.yaml"
+                f"pod-secondary-network-{node_name_sanitized}-client.yaml"
             )
-            pod_name = f"normal-pod-secondary-network-{node_name}-client-{port}"
+            pod_name = (
+                f"normal-pod-secondary-network-{node_name_sanitized}-client-{port}"
+            )
         elif pod_type == PodType.SRIOV:
             in_file_template = tftbase.get_manifest("sriov-pod.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"sriov-pod-{node_name}-client.yaml"
+                f"sriov-pod-{node_name_sanitized}-client.yaml"
             )
-            pod_name = f"sriov-pod-{node_name}-client-{port}"
+            pod_name = f"sriov-pod-{node_name_sanitized}-client-{port}"
         elif pod_type == PodType.NORMAL:
             in_file_template = tftbase.get_manifest("pod.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"pod-{node_name}-client.yaml"
+                f"pod-{node_name_sanitized}-client.yaml"
             )
-            pod_name = f"normal-pod-{node_name}-client-{port}"
+            pod_name = f"normal-pod-{node_name_sanitized}-client-{port}"
         elif pod_type == PodType.HOSTBACKED:
             in_file_template = tftbase.get_manifest("host-pod.yaml.j2")
             out_file_yaml = tftbase.get_manifest_renderpath(
-                f"host-pod-{node_name}-client.yaml"
+                f"host-pod-{node_name_sanitized}-client.yaml"
             )
-            pod_name = f"host-pod-{node_name}-client-{port}"
+            pod_name = f"host-pod-{node_name_sanitized}-client-{port}"
         else:
             raise ValueError("Invalid pod_type {pod_type}")
 

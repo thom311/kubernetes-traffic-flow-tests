@@ -54,11 +54,9 @@ class TaskMeasureCPU(PluginTask):
             tenant=tenant,
         )
 
+        self.pod_name = f"tools-pod-{self.node_name_sanitized()}-measure-cpu"
         self.in_file_template = tftbase.get_manifest("tools-pod.yaml.j2")
-        self.out_file_yaml = tftbase.get_manifest_renderpath(
-            f"tools-pod-{self.node_name}-measure-cpu.yaml"
-        )
-        self.pod_name = f"tools-pod-{self.node_name}-measure-cpu"
+        self.out_file_yaml = tftbase.get_manifest_renderpath(self.pod_name + ".yaml")
 
     def initialize(self) -> None:
         super().initialize()

@@ -3,6 +3,7 @@ import functools
 import json
 import math
 import os
+import re
 import shlex
 import typing
 
@@ -148,6 +149,18 @@ def get_manifest(filename: str) -> str:
     raise ValueError(
         f"Could not find manifest file {repr(filename)}. Checked in {msg}{repr(f2)}."
     )
+
+
+def str_sanitize(value: str) -> str:
+    def _repl(m: re.Match[str]) -> str:
+        ch = m.group(0)
+        if ch == "_":
+            return "__"
+        if ch == ".":
+            return "_o"
+        return f"_{ord(ch):x}_"
+
+    return re.sub(r"[^-a-zA-Z0-9]", _repl, value)
 
 
 @functools.cache

@@ -185,3 +185,8 @@ def test_get_manifest() -> None:
         tftbase.tftfile("manifests/overrides/host-pod.yaml.j2"),
     )
     assert os.path.exists(f)
+
+
+def test_str_sanitize() -> None:
+    assert tftbase.str_sanitize("") == ""
+    assert tftbase.str_sanitize("hello!wo_rld@12.3") == "hello_21_wo__rld_40_12_o3"
